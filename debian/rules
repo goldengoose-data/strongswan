@@ -38,6 +38,7 @@ CONFIGUREARGS := --libdir=/usr/lib --libexecdir=/usr/lib \
 		--enable-xauth-eap \
 		--enable-xauth-pam \
 		--disable-blowfish \
+		--disable-fast \
 		--disable-des # BSD-Young license
 	#--with-user=strongswan --with-group=nogroup
 	#	--enable-kernel-pfkey --enable-kernel-klips \
