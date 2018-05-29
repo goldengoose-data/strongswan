@@ -65,6 +65,7 @@ Description: strongSwan utility and crypto library
   - gmp (RSA/DH crypto backend based on libgmp)
   - hmac (HMAC wrapper using various hashers)
   - md5 (MD5 hasher software implementation)
+  - mgf1 (Mask Generation Functions based on the SHA-1, SHA-256 and SHA-512)
   - nonce (Default nonce generation plugin)
   - pem (PEM encoding/decoding routines)
   - pgp (PGP encoding/decoding routines)
