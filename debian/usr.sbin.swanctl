@@ -1,6 +1,6 @@
 #include <tunables/global>
 
-/usr/sbin/swanctl {
+/usr/sbin/swanctl flags=(attach_disconnected) {
   #include <abstractions/base>
 
   # Allow /etc/swanctl/x509ca/ files to symlink to system-wide ca-certificates
