@@ -28,6 +28,7 @@
   capability chown,
   capability setgid,
   capability setuid,
+  capability setpcap,
 
   # libcharon-extra-plugins: xauth-pam
   capability audit_write,
