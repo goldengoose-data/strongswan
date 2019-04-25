@@ -61,7 +61,7 @@
   /run/charon.*             rw,
   /run/pcscd/pcscd.comm     rw,
 
-  /usr/lib/ipsec/charon     rmix,
+  /usr/sbin/charon-systemd  rmix,
   /usr/lib/ipsec/imcvs/     r,
   /usr/lib/ipsec/imcvs/**   rm,
 
