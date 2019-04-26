@@ -89,9 +89,6 @@ Description: strongSwan utility and crypto library
   - kernel-pfroute [kfreebsd] (Networking kernel interface using PF_ROUTE)
   - resolve (Writes name servers received via IKE to a resolv.conf file or
     installs them via resolvconf(8))
- .
- Also included is the libtpmtss library adding support for TPM plugin
- (https://wiki.strongswan.org/projects/strongswan/wiki/TpmPlugin)
 
 Package: libstrongswan-standard-plugins
 Architecture: any
@@ -142,6 +139,9 @@ Description: strongSwan utility and crypto library (extra plugins)
   - rdrand (High quality / high performance random source using the Intel
     rdrand instruction found on Ivy Bridge processors)
   - test-vectors (Set of test vectors for various algorithms)
+ .
+ Also included is the libtpmtss library adding support for TPM plugin
+ (https://wiki.strongswan.org/projects/strongswan/wiki/TpmPlugin)
 
 Package: libcharon-extauth-plugins
 Architecture: any
