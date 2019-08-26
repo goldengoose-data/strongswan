@@ -1,4 +1,4 @@
-strongswan (5.8.0-1) UNRELEASED; urgency=medium
+strongswan (5.8.0-1) unstable; urgency=medium
 
   [ Christian Ehrhardt ]
   * Fix fails in debian CI (Closes: #926479)
@@ -21,7 +21,7 @@ strongswan (5.8.0-1) UNRELEASED; urgency=medium
   * handle renaming of systemd service files
   * d/control: remove obsolete breaks/replaces
 
- -- Yves-Alexis Perez <corsac@debian.org>  Mon, 26 Aug 2019 12:56:25 +0200
+ -- Yves-Alexis Perez <corsac@debian.org>  Mon, 26 Aug 2019 12:58:23 +0200
 
 strongswan (5.7.2-1) unstable; urgency=medium
 
