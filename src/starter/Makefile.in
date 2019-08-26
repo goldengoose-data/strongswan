@@ -124,8 +124,7 @@ am__installdirs = "$(DESTDIR)$(ipsecdir)"
 PROGRAMS = $(ipsec_PROGRAMS)
 am_starter_OBJECTS = starter.$(OBJEXT) args.$(OBJEXT) \
 	confread.$(OBJEXT) keywords.$(OBJEXT) cmp.$(OBJEXT) \
-	invokecharon.$(OBJEXT) starterstroke.$(OBJEXT) \
-	netkey.$(OBJEXT) klips.$(OBJEXT)
+	invokecharon.$(OBJEXT) starterstroke.$(OBJEXT)
 starter_OBJECTS = $(am_starter_OBJECTS)
 am__DEPENDENCIES_1 =
 starter_DEPENDENCIES =  \
@@ -363,6 +362,7 @@ SOCKLIB = @SOCKLIB@
 STRIP = @STRIP@
 UNWINDLIB = @UNWINDLIB@
 VERSION = @VERSION@
+WOLFSSL_LIB = @WOLFSSL_LIB@
 YACC = @YACC@
 YFLAGS = @YFLAGS@
 abs_builddir = @abs_builddir@
@@ -499,8 +499,7 @@ SUBDIRS = . tests
 starter_SOURCES = \
 starter.c files.h \
 args.c args.h confread.c confread.h keywords.c keywords.h cmp.c cmp.h \
-invokecharon.c invokecharon.h starterstroke.c starterstroke.h \
-netkey.c netkey.h klips.c klips.h
+invokecharon.c invokecharon.h starterstroke.c starterstroke.h
 
 
 # parser is also used by tests
@@ -660,8 +659,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/confread.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/invokecharon.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/keywords.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/klips.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/netkey.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/starter.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/starterstroke.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@parser/$(DEPDIR)/conf_parser.Plo@am__quote@

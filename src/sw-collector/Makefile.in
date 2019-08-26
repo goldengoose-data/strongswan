@@ -326,6 +326,7 @@ SOCKLIB = @SOCKLIB@
 STRIP = @STRIP@
 UNWINDLIB = @UNWINDLIB@
 VERSION = @VERSION@
+WOLFSSL_LIB = @WOLFSSL_LIB@
 YACC = @YACC@
 YFLAGS = @YFLAGS@
 abs_builddir = @abs_builddir@
@@ -469,7 +470,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libtncif \
 	-I$(top_srcdir)/src/libimcv \
-	-DPLUGINS=\""random openssl sqlite curl"\"
+	-DPLUGINS=\""random openssl wolfssl sqlite curl"\"
 
 AM_CFLAGS = $(json_CFLAGS)
 sw_collector_LDADD = \

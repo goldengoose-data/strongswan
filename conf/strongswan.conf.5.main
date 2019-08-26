@@ -1756,6 +1756,10 @@ Enable loaded whitelist plugin.
 Socket provided by the whitelist plugin.
 
 .TP
+.BR charon.plugins.wolfssl.fips_mode " [no]"
+Enable to prevent loading the plugin if wolfSSL is not in FIPS mode.
+
+.TP
 .BR charon.plugins.xauth-eap.backend " [radius]"
 EAP plugin to be used as backend for XAuth credential verification.
 
@@ -1912,6 +1916,21 @@ in addition to getting
 used as constraints against signature schemes employed in the certificate chain,
 are also used as constraints against the signature scheme used by peers during
 IKEv2.
+
+.TP
+.BR charon.spi_label " [0x0000000000000000]"
+Value mixed into the local IKE SPIs after applying
+.RI "" "spi_mask" "."
+
+
+.TP
+.BR charon.spi_mask " [0x0000000000000000]"
+Mask applied to local IKE SPIs before mixing in
+.RI "" "spi_label" ""
+(bits set will be
+replaced with
+.RI "" "spi_label" ")."
+
 
 .TP
 .BR charon.spi_max " [0xcfffffff]"

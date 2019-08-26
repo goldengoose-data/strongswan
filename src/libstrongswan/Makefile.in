@@ -218,39 +218,41 @@ host_triplet = @host@
 @MONOLITHIC_TRUE@@USE_PADLOCK_TRUE@am__append_104 = plugins/padlock/libstrongswan-padlock.la
 @USE_OPENSSL_TRUE@am__append_105 = plugins/openssl
 @MONOLITHIC_TRUE@@USE_OPENSSL_TRUE@am__append_106 = plugins/openssl/libstrongswan-openssl.la
-@USE_GCRYPT_TRUE@am__append_107 = plugins/gcrypt
-@MONOLITHIC_TRUE@@USE_GCRYPT_TRUE@am__append_108 = plugins/gcrypt/libstrongswan-gcrypt.la
-@USE_BOTAN_TRUE@am__append_109 = plugins/botan
-@MONOLITHIC_TRUE@@USE_BOTAN_TRUE@am__append_110 = plugins/botan/libstrongswan-botan.la
-@USE_FIPS_PRF_TRUE@am__append_111 = plugins/fips_prf
-@MONOLITHIC_TRUE@@USE_FIPS_PRF_TRUE@am__append_112 = plugins/fips_prf/libstrongswan-fips-prf.la
-@USE_AGENT_TRUE@am__append_113 = plugins/agent
-@MONOLITHIC_TRUE@@USE_AGENT_TRUE@am__append_114 = plugins/agent/libstrongswan-agent.la
-@USE_KEYCHAIN_TRUE@am__append_115 = plugins/keychain
-@MONOLITHIC_TRUE@@USE_KEYCHAIN_TRUE@am__append_116 = plugins/keychain/libstrongswan-keychain.la
-@USE_PKCS11_TRUE@am__append_117 = plugins/pkcs11
-@MONOLITHIC_TRUE@@USE_PKCS11_TRUE@am__append_118 = plugins/pkcs11/libstrongswan-pkcs11.la
-@USE_CHAPOLY_TRUE@am__append_119 = plugins/chapoly
-@MONOLITHIC_TRUE@@USE_CHAPOLY_TRUE@am__append_120 = plugins/chapoly/libstrongswan-chapoly.la
-@USE_CTR_TRUE@am__append_121 = plugins/ctr
-@MONOLITHIC_TRUE@@USE_CTR_TRUE@am__append_122 = plugins/ctr/libstrongswan-ctr.la
-@USE_CCM_TRUE@am__append_123 = plugins/ccm
-@MONOLITHIC_TRUE@@USE_CCM_TRUE@am__append_124 = plugins/ccm/libstrongswan-ccm.la
-@USE_GCM_TRUE@am__append_125 = plugins/gcm
-@MONOLITHIC_TRUE@@USE_GCM_TRUE@am__append_126 = plugins/gcm/libstrongswan-gcm.la
-@USE_MGF1_TRUE@am__append_127 = plugins/mgf1
-@MONOLITHIC_TRUE@@USE_MGF1_TRUE@am__append_128 = plugins/mgf1/libstrongswan-mgf1.la
-@USE_NTRU_TRUE@am__append_129 = plugins/ntru
-@MONOLITHIC_TRUE@@USE_NTRU_TRUE@am__append_130 = plugins/ntru/libstrongswan-ntru.la
-@USE_BLISS_TRUE@am__append_131 = plugins/bliss
-@MONOLITHIC_TRUE@@USE_BLISS_TRUE@am__append_132 = plugins/bliss/libstrongswan-bliss.la
-@USE_NEWHOPE_TRUE@am__append_133 = plugins/newhope
-@MONOLITHIC_TRUE@@USE_NEWHOPE_TRUE@am__append_134 = plugins/newhope/libstrongswan-newhope.la
-@USE_TEST_VECTORS_TRUE@am__append_135 = plugins/test_vectors
-@MONOLITHIC_TRUE@@USE_TEST_VECTORS_TRUE@am__append_136 = plugins/test_vectors/libstrongswan-test-vectors.la
-@USE_LIBNTTFFT_TRUE@am__append_137 = math/libnttfft/tests
-@USE_BLISS_TRUE@am__append_138 = plugins/bliss/tests
-@USE_NEWHOPE_TRUE@am__append_139 = plugins/newhope/tests
+@USE_WOLFSSL_TRUE@am__append_107 = plugins/wolfssl
+@MONOLITHIC_TRUE@@USE_WOLFSSL_TRUE@am__append_108 = plugins/wolfssl/libstrongswan-wolfssl.la
+@USE_GCRYPT_TRUE@am__append_109 = plugins/gcrypt
+@MONOLITHIC_TRUE@@USE_GCRYPT_TRUE@am__append_110 = plugins/gcrypt/libstrongswan-gcrypt.la
+@USE_BOTAN_TRUE@am__append_111 = plugins/botan
+@MONOLITHIC_TRUE@@USE_BOTAN_TRUE@am__append_112 = plugins/botan/libstrongswan-botan.la
+@USE_FIPS_PRF_TRUE@am__append_113 = plugins/fips_prf
+@MONOLITHIC_TRUE@@USE_FIPS_PRF_TRUE@am__append_114 = plugins/fips_prf/libstrongswan-fips-prf.la
+@USE_AGENT_TRUE@am__append_115 = plugins/agent
+@MONOLITHIC_TRUE@@USE_AGENT_TRUE@am__append_116 = plugins/agent/libstrongswan-agent.la
+@USE_KEYCHAIN_TRUE@am__append_117 = plugins/keychain
+@MONOLITHIC_TRUE@@USE_KEYCHAIN_TRUE@am__append_118 = plugins/keychain/libstrongswan-keychain.la
+@USE_PKCS11_TRUE@am__append_119 = plugins/pkcs11
+@MONOLITHIC_TRUE@@USE_PKCS11_TRUE@am__append_120 = plugins/pkcs11/libstrongswan-pkcs11.la
+@USE_CHAPOLY_TRUE@am__append_121 = plugins/chapoly
+@MONOLITHIC_TRUE@@USE_CHAPOLY_TRUE@am__append_122 = plugins/chapoly/libstrongswan-chapoly.la
+@USE_CTR_TRUE@am__append_123 = plugins/ctr
+@MONOLITHIC_TRUE@@USE_CTR_TRUE@am__append_124 = plugins/ctr/libstrongswan-ctr.la
+@USE_CCM_TRUE@am__append_125 = plugins/ccm
+@MONOLITHIC_TRUE@@USE_CCM_TRUE@am__append_126 = plugins/ccm/libstrongswan-ccm.la
+@USE_GCM_TRUE@am__append_127 = plugins/gcm
+@MONOLITHIC_TRUE@@USE_GCM_TRUE@am__append_128 = plugins/gcm/libstrongswan-gcm.la
+@USE_MGF1_TRUE@am__append_129 = plugins/mgf1
+@MONOLITHIC_TRUE@@USE_MGF1_TRUE@am__append_130 = plugins/mgf1/libstrongswan-mgf1.la
+@USE_NTRU_TRUE@am__append_131 = plugins/ntru
+@MONOLITHIC_TRUE@@USE_NTRU_TRUE@am__append_132 = plugins/ntru/libstrongswan-ntru.la
+@USE_BLISS_TRUE@am__append_133 = plugins/bliss
+@MONOLITHIC_TRUE@@USE_BLISS_TRUE@am__append_134 = plugins/bliss/libstrongswan-bliss.la
+@USE_NEWHOPE_TRUE@am__append_135 = plugins/newhope
+@MONOLITHIC_TRUE@@USE_NEWHOPE_TRUE@am__append_136 = plugins/newhope/libstrongswan-newhope.la
+@USE_TEST_VECTORS_TRUE@am__append_137 = plugins/test_vectors
+@MONOLITHIC_TRUE@@USE_TEST_VECTORS_TRUE@am__append_138 = plugins/test_vectors/libstrongswan-test-vectors.la
+@USE_LIBNTTFFT_TRUE@am__append_139 = math/libnttfft/tests
+@USE_BLISS_TRUE@am__append_140 = plugins/bliss/tests
+@USE_NEWHOPE_TRUE@am__append_141 = plugins/newhope/tests
 subdir = src/libstrongswan
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/config/libtool.m4 \
@@ -331,7 +333,7 @@ libstrongswan_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
 	$(am__append_118) $(am__append_120) $(am__append_122) \
 	$(am__append_124) $(am__append_126) $(am__append_128) \
 	$(am__append_130) $(am__append_132) $(am__append_134) \
-	$(am__append_136)
+	$(am__append_136) $(am__append_138)
 am__libstrongswan_la_SOURCES_DIST = library.c asn1/asn1.c \
 	asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c \
 	bio/bio_writer.c collections/blocking_queue.c \
@@ -668,9 +670,9 @@ DIST_SUBDIRS = . math/libnttfft plugins/af_alg plugins/aes plugins/des \
 	plugins/sshkey plugins/pem plugins/curl plugins/files \
 	plugins/winhttp plugins/unbound plugins/soup plugins/ldap \
 	plugins/mysql plugins/sqlite plugins/padlock plugins/openssl \
-	plugins/gcrypt plugins/botan plugins/fips_prf plugins/agent \
-	plugins/keychain plugins/pkcs11 plugins/chapoly plugins/ctr \
-	plugins/ccm plugins/gcm plugins/mgf1 plugins/ntru \
+	plugins/wolfssl plugins/gcrypt plugins/botan plugins/fips_prf \
+	plugins/agent plugins/keychain plugins/pkcs11 plugins/chapoly \
+	plugins/ctr plugins/ccm plugins/gcm plugins/mgf1 plugins/ntru \
 	plugins/bliss plugins/newhope plugins/test_vectors tests \
 	math/libnttfft/tests plugins/bliss/tests plugins/newhope/tests
 am__DIST_COMMON = $(srcdir)/Makefile.in $(top_srcdir)/depcomp \
@@ -809,6 +811,7 @@ SOCKLIB = @SOCKLIB@
 STRIP = @STRIP@
 UNWINDLIB = @UNWINDLIB@
 VERSION = @VERSION@
+WOLFSSL_LIB = @WOLFSSL_LIB@
 YACC = @YACC@
 YFLAGS = @YFLAGS@
 abs_builddir = @abs_builddir@
@@ -1084,7 +1087,8 @@ libstrongswan_la_LIBADD = $(DLLIB) $(ATOMICLIB) $(BTLIB) $(SOCKLIB) \
 	$(am__append_114) $(am__append_116) $(am__append_118) \
 	$(am__append_120) $(am__append_122) $(am__append_124) \
 	$(am__append_126) $(am__append_128) $(am__append_130) \
-	$(am__append_132) $(am__append_134) $(am__append_136)
+	$(am__append_132) $(am__append_134) $(am__append_136) \
+	$(am__append_138)
 AM_CPPFLAGS = -I$(top_srcdir)/src/libstrongswan \
 	-DIPSEC_DIR=\"${ipsecdir}\" -DIPSEC_LIB_DIR=\"${ipseclibdir}\" \
 	-DPLUGINDIR=\"${plugindir}\" \
@@ -1146,9 +1150,9 @@ $(srcdir)/crypto/proposal/proposal_keywords_static.c
 @MONOLITHIC_FALSE@	$(am__append_121) $(am__append_123) \
 @MONOLITHIC_FALSE@	$(am__append_125) $(am__append_127) \
 @MONOLITHIC_FALSE@	$(am__append_129) $(am__append_131) \
-@MONOLITHIC_FALSE@	$(am__append_133) $(am__append_135) tests \
-@MONOLITHIC_FALSE@	$(am__append_137) $(am__append_138) \
-@MONOLITHIC_FALSE@	$(am__append_139)
+@MONOLITHIC_FALSE@	$(am__append_133) $(am__append_135) \
+@MONOLITHIC_FALSE@	$(am__append_137) tests $(am__append_139) \
+@MONOLITHIC_FALSE@	$(am__append_140) $(am__append_141)
 
 # build unit tests
 ##################
@@ -1180,9 +1184,9 @@ $(srcdir)/crypto/proposal/proposal_keywords_static.c
 @MONOLITHIC_TRUE@	$(am__append_121) $(am__append_123) \
 @MONOLITHIC_TRUE@	$(am__append_125) $(am__append_127) \
 @MONOLITHIC_TRUE@	$(am__append_129) $(am__append_131) \
-@MONOLITHIC_TRUE@	$(am__append_133) $(am__append_135) . tests \
-@MONOLITHIC_TRUE@	$(am__append_137) $(am__append_138) \
-@MONOLITHIC_TRUE@	$(am__append_139)
+@MONOLITHIC_TRUE@	$(am__append_133) $(am__append_135) \
+@MONOLITHIC_TRUE@	$(am__append_137) . tests $(am__append_139) \
+@MONOLITHIC_TRUE@	$(am__append_140) $(am__append_141)
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 

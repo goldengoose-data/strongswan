@@ -257,6 +257,7 @@ SOCKLIB = @SOCKLIB@
 STRIP = @STRIP@
 UNWINDLIB = @UNWINDLIB@
 VERSION = @VERSION@
+WOLFSSL_LIB = @WOLFSSL_LIB@
 YACC = @YACC@
 YFLAGS = @YFLAGS@
 abs_builddir = @abs_builddir@
@@ -394,6 +395,7 @@ EXTRA_DIST = LICENSE README.rst MANIFEST.in \
 	vici/test/__init__.py \
 	vici/test/test_protocol.py \
 	vici/__init__.py \
+	vici/command_wrappers.py \
 	vici/compat.py \
 	vici/exception.py \
 	vici/protocol.py \
