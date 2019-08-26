@@ -28,6 +28,7 @@
   capability chown,
   capability setgid,
   capability setuid,
+  capability setpcap,
 
   # libcharon-extra-plugins: xauth-pam
   capability audit_write,
@@ -60,7 +61,7 @@
   /run/charon.*             rw,
   /run/pcscd/pcscd.comm     rw,
 
-  /usr/lib/ipsec/charon     rmix,
+  /usr/sbin/charon-systemd  rmix,
   /usr/lib/ipsec/imcvs/     r,
   /usr/lib/ipsec/imcvs/**   rm,
 
