@@ -257,4 +257,4 @@ override_dh_missing-indep:
 	dh_missing --list-missing
 
 %:
-	dh $@ --with systemd
+	dh $@
