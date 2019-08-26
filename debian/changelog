@@ -1,3 +1,28 @@
+strongswan (5.8.0-1) UNRELEASED; urgency=medium
+
+  [ Christian Ehrhardt ]
+  * Fix fails in debian CI (Closes: #926479)
+
+  [ Simon Deziel ]
+  * d/usr.lib.ipsec.charon, d/usr.sbin.charon-systemd: add CAP_SETPCAP to
+    apparmor to allow dropping caps
+  * d/usr.sbin.swanctl: add attach_disconnected to work inside containers
+  * d/usr.sbin.charon-systemd: allow accessing the binary
+  * d/usr.sbin.swanctl: allow reading own binary
+
+  [ Yves-Alexis Perez ]
+  * New upstream version 5.8.0
+  * d/control: update standards version to 4.4.0
+  * use debhelper-compat b-d for dh compat level
+  * d/control: bump dh compat level to 11
+  * d/rules: drop systemd addon, useless in compat 11
+  * strongswan-libcharon: install xfrmi binary
+  * d/patches refreshed for new upstream release
+  * handle renaming of systemd service files
+  * d/control: remove obsolete breaks/replaces
+
+ -- Yves-Alexis Perez <corsac@debian.org>  Mon, 26 Aug 2019 12:56:25 +0200
+
 strongswan (5.7.2-1) unstable; urgency=medium
 
   * d/control: remove Rene from Uploaders, thanks!
