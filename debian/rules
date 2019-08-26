@@ -129,7 +129,7 @@ ifeq ($(DEB_HOST_ARCH_OS),linux)
 	dh_install -p libstrongswan-extra-plugins usr/share/strongswan/templates/config/plugins/af-alg.conf
 	dh_install -p libstrongswan-extra-plugins etc/strongswan.d/charon/af-alg.conf
 	# the systemd service file only gets generated on Linux
-	dh_install -p strongswan-starter lib/systemd/system/strongswan.service
+	dh_install -p strongswan-starter lib/systemd/system/strongswan-starter.service
 endif
 
 ifeq ($(DEB_HOST_ARCH_OS),kfreebsd)
@@ -180,7 +180,7 @@ endif
 		-Xlibstrongswan-rdrand.so -X rdrand.conf \
 		-Xlibstrongswan-aesni.so -X aesni.conf \
 		-Xlibstrongswan-af-alg.so -X af-alg.conf \
-		-Xstrongswan.service
+		-Xstrongswan-starter.service
 
 	# AppArmor.
 	dh_apparmor --profile-name=usr.lib.ipsec.charon -p strongswan-charon
