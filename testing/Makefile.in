@@ -235,6 +235,7 @@ SOCKLIB = @SOCKLIB@
 STRIP = @STRIP@
 UNWINDLIB = @UNWINDLIB@
 VERSION = @VERSION@
+WOLFSSL_LIB = @WOLFSSL_LIB@
 YACC = @YACC@
 YFLAGS = @YFLAGS@
 abs_builddir = @abs_builddir@
@@ -446,6 +447,9 @@ distdir: $(DISTFILES)
 	    || exit 1; \
 	  fi; \
 	done
+	$(MAKE) $(AM_MAKEFLAGS) \
+	  top_distdir="$(top_distdir)" distdir="$(distdir)" \
+	  dist-hook
 check-am: all-am
 check: check-am
 all-am: Makefile
@@ -549,7 +553,7 @@ uninstall-am:
 .MAKE: install-am install-strip
 
 .PHONY: all all-am check check-am clean clean-generic clean-libtool \
-	cscopelist-am ctags-am distclean distclean-generic \
+	cscopelist-am ctags-am dist-hook distclean distclean-generic \
 	distclean-libtool distdir dvi dvi-am html html-am info info-am \
 	install install-am install-data install-data-am install-dvi \
 	install-dvi-am install-exec install-exec-am install-html \
@@ -562,6 +566,15 @@ uninstall-am:
 
 .PRECIOUS: Makefile
 
+
+# exclude all files ignored by Git from the tarball
+dist-hook:
+	if git -C $(srcdir) ls-files --error-unmatch hosts > /dev/null 2>&1; then \
+		find $(abs_srcdir)/hosts $(abs_srcdir)/tests -print0 | \
+			sed -z -e "s|^$(abs_srcdir)/||" | \
+			git -C $(srcdir) check-ignore -z --stdin | \
+			xargs -0 -I{} rm -rf $(distdir)/{}; \
+	fi
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
