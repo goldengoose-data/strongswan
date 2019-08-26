@@ -1,4 +1,5 @@
 usr/lib/ipsec/libcharon*
+usr/lib/ipsec/xfrmi
 ## libcharon plugins
 # socket-default
 usr/lib/ipsec/plugins/libstrongswan-socket-default.so
