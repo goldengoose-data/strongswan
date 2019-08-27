@@ -239,8 +239,8 @@ Description: strongSwan charon library
    - counters
    - bypass-lan (disabled by default)
  .
- It also contains the xfrmi binary which can be used on Linux 4.19+ to create
- XFRM interfaces (for more information, see
+ On Linux, it also contains the xfrmi binary which can be used on Linux 4.19+
+ to create XFRM interfaces (for more information, see
  https://wiki.strongswan.org/projects/strongswan/wiki/RouteBasedVPN)
 
 Package: strongswan-charon
