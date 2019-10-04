@@ -65,6 +65,7 @@ Description: strongSwan utility and crypto library
   - gmp (RSA/DH crypto backend based on libgmp)
   - hmac (HMAC wrapper using various hashers)
   - md5 (MD5 hasher software implementation)
+  - mgf1 (Mask Generation Functions based on the SHA-1, SHA-256 and SHA-512)
   - nonce (Default nonce generation plugin)
   - pem (PEM encoding/decoding routines)
   - pgp (PGP encoding/decoding routines)
@@ -88,9 +89,6 @@ Description: strongSwan utility and crypto library
   - kernel-pfroute [kfreebsd] (Networking kernel interface using PF_ROUTE)
   - resolve (Writes name servers received via IKE to a resolv.conf file or
     installs them via resolvconf(8))
- .
- Also included is the libtpmtss library adding support for TPM plugin
- (https://wiki.strongswan.org/projects/strongswan/wiki/TpmPlugin)
 
 Package: libstrongswan-standard-plugins
 Architecture: any
@@ -141,6 +139,34 @@ Description: strongSwan utility and crypto library (extra plugins)
   - rdrand (High quality / high performance random source using the Intel
     rdrand instruction found on Ivy Bridge processors)
   - test-vectors (Set of test vectors for various algorithms)
+ .
+ Also included is the libtpmtss library adding support for TPM plugin
+ (https://wiki.strongswan.org/projects/strongswan/wiki/TpmPlugin)
+
+Package: libcharon-extauth-plugins
+Architecture: any
+Depends: libstrongswan (= ${binary:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
+Breaks: libcharon-extra-plugins (<< 5.8.0-2~)
+Replaces: libcharon-extra-plugins (<< 5.8.0-2~)
+Description: strongSwan charon library (extended authentication plugins)
+ The strongSwan VPN suite uses the native IPsec stack in the standard
+ Linux kernel. It supports both the IKEv1 and IKEv2 protocols.
+ .
+ This package provides extended authentication plugins for the charon library:
+  - eap-mschapv2 (EAP-MSCHAPv2 protocol handler using passwords/NT hashes)
+    Used for client side to connect to some VPN concentrators configured for
+    Windows 7+ and modern OSX/iOS using IKEv2 (identify with public key,
+    authenticate with MSCHAPv2).
+  - xauth-generic (Generic XAuth backend that provides passwords from
+    ipsec.secrets and other credential sets)
+    Used for the client side to connect to VPN concentrators configured for
+    Android and older OSX/iOS using IKEv1 and XAUTH (identify with public key,
+    authenticate with XAUTH password).
+ .
+ These are the "not always, but still more commonly used" plugins, for further
+ needs even more plugins can be found in the package libcharon-extra-plugins.
 
 Package: libcharon-extra-plugins
 Architecture: any
@@ -160,7 +186,6 @@ Description: strongSwan charon library (extra plugins)
   - eap-identity (EAP-Identity identity exchange algorithm, to use with other
     EAP protocols)
   - eap-md5 (EAP-MD5 protocol handler using passwords)
-  - eap-mschapv2 (EAP-MSCHAPv2 protocol handler using passwords/NT hashes)
   - eap-radius (EAP server proxy plugin forwarding EAP conversations to a
     RADIUS server)
   - eap-tls (EAP-TLS protocol handler, to authenticate with certificates in
@@ -169,15 +194,12 @@ Description: strongSwan charon library (extra plugins)
   - eap-ttls (EAP-TTLS protocol handler, wraps other EAP methods securely)
   - error-notify (Notification about errors via UNIX socket)
   - ha (High-Availability clustering)
+  - kernel-libipsec (Userspace IPsec Backend with TUN devices)
   - led (Let Linux LED subsystem LEDs blink on IKE activity)
   - lookip (Virtual IP lookup facility using a UNIX socket)
-  - medcli (Web interface based mediation client interface)
-  - medsrv (Web interface based mediation server interface)
   - tnc (Trusted Network Connect)
   - unity (Cisco Unity extensions for IKEv1)
   - xauth-eap (XAuth backend that uses EAP methods to verify passwords)
-  - xauth-generic (Generic XAuth backend that provides passwords from
-    ipsec.secrets and other credential sets)
   - xauth-pam (XAuth backend that uses PAM modules to verify passwords)
 
 Package: strongswan-starter
@@ -204,6 +226,7 @@ Depends: libstrongswan (= ${binary:Version}),
          ${shlibs:Depends}
 Breaks: strongswan-starter (<= 5.6.1-2)
 Replaces: strongswan-starter (<= 5.6.1-2)
+Recommends: libcharon-extauth-plugins
 Suggests: libcharon-extra-plugins
 Description: strongSwan charon library
  The strongSwan VPN suite uses the native IPsec stack in the standard

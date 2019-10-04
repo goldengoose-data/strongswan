@@ -24,6 +24,9 @@
   # Allow reading own binary
   /usr/sbin/swanctl             r,
 
+  # for af-alg plugin
+  network alg seqpacket,
+
   # As of 5.5.2, swanctl unnecessarily loads plugins by default, even though no
   # plugins are actually used by swanctl.  The following can be removed if
   # plugin loading is disabled.

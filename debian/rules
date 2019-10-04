@@ -26,6 +26,7 @@ CONFIGUREARGS := --libdir=/usr/lib --libexecdir=/usr/lib \
 		--enable-gcm \
 		--enable-gcrypt \
 		--enable-ha \
+		--enable-kernel-libipsec \
 		--enable-ldap \
 		--enable-led \
 		--enable-lookip \
@@ -38,6 +39,7 @@ CONFIGUREARGS := --libdir=/usr/lib --libexecdir=/usr/lib \
 		--enable-xauth-eap \
 		--enable-xauth-pam \
 		--disable-blowfish \
+		--disable-fast \
 		--disable-des # BSD-Young license
 	#--with-user=strongswan --with-group=nogroup
 	#	--enable-kernel-pfkey --enable-kernel-klips \
@@ -191,12 +193,6 @@ endif
 
 	# add additional files not covered by upstream makefile...
 	install --mode=0600 $(CURDIR)/debian/ipsec.secrets.proto $(CURDIR)/debian/strongswan-starter/etc/ipsec.secrets
-	# also "patch" ipsec.conf to include the debconf-managed file
-	echo >> $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf
-	echo "include /var/lib/strongswan/ipsec.conf.inc" >> $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf
-	# and to enable both IKEv1 and IKEv2 by default
-	sed -r 's/^[ \t]+# *charonstart=(yes|no) */\tcharonstart=yes/' < $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf > $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf.tmp
-	mv $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf.tmp $(CURDIR)/debian/strongswan-starter/etc/ipsec.conf
 
 	# set permissions on ipsec.secrets and private key directories
 	chmod 600 $(CURDIR)/debian/strongswan-starter/etc/ipsec.secrets
