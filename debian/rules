@@ -218,7 +218,7 @@ endif
 	find $(CURDIR)/debian/*strongswan*/ -name "/.svn/" | xargs --no-run-if-empty rm -rf
 
 override_dh_installinit:
-	dh_installinit -n --name=ipsec
+	dh_installinit --name=ipsec
 
 override_dh_installchangelogs:
 	dh_installchangelogs NEWS
