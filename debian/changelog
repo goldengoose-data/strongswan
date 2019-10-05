@@ -1,3 +1,40 @@
+strongswan (5.8.0-2) UNRELEASED; urgency=medium
+
+  [ Christian Ehrhardt ]
+  * d/control: Mention mgf1 plugin which is in libstrongswan now
+  * Complete the disabling of libfast
+  * Clean up d/strongswan-starter.postinst: section about runlevel changes
+  * Clean up d/strongswan-starter.postinst: opportunistic encryption
+  * Enable kernel-libipsec for use of strongswan in containers
+  * d/control, d/libcharon-{extras,extauth}-plugins.install: Add
+    extauth-plugins package (Recommends)
+  * apparmor: d/usr.lib.ipsec.charon: sync notify rule from charon-systemd
+  * apparmor: fix apparmor denies reading the own FDs (LP: 1786250)
+  * apparmor: d/usr.sbin.charon-systemd: allow CLUSTERIP for ha plugin
+    (LP: 1773956)
+  * apparmor: d/usr.lib.ipsec.stroke: executables need to be able to read map
+    and execute themselves
+  * apparmor: d/usr.lib.ipsec.lookip: executables need to be able to read map
+    and execute themselves
+  * apparmor: d/usr.sbin.swanctl: add apparmor rule for af-alg plugin
+    (LP: 1807962)
+  * d/control: libtpmtss is actually packaged in libstrongswan-extra-plugins
+
+  [ Ryan Harper ]
+  * Remove code related to unused debconf managed config
+
+  [ Yves-Alexis Perez ]
+  * ship xfrmi only on Linux, fix FTBFS on kfreebsd
+  * d/libcharon-extra-plugins.install: drop plugins disabled in Debian
+  * d/control: update standards version to 4.4.1
+  * d/strongswan-starter.templates: drop runlevel_changes
+  * let dh_installinit handle update-rc.d calls
+  * d/salsa-ci.yml: add a salsa pipeline config
+  * d/rules: drop dbgsym migration
+  * strongswan-starter: update line number in lintian override
+
+ -- Yves-Alexis Perez <corsac@debian.org>  Sat, 05 Oct 2019 14:54:26 +0200
+
 strongswan (5.8.0-1) unstable; urgency=medium
 
   [ Christian Ehrhardt ]
