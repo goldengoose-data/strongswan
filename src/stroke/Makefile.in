@@ -215,6 +215,7 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+FUZZING_CFLAGS = @FUZZING_CFLAGS@
 FUZZING_LDFLAGS = @FUZZING_LDFLAGS@
 GEM = @GEM@
 GENHTML = @GENHTML@
@@ -777,11 +778,12 @@ stroke_keywords.h: $(srcdir)/stroke_keywords.h.in
 		$(AM_V_GEN) \
 		sed \
 		-e "s:\@GPERF_LEN_TYPE\@:$(GPERF_LEN_TYPE):" \
-		$< > $@
+		$(srcdir)/stroke_keywords.h.in > $@
 
 stroke_keywords.c:	$(srcdir)/stroke_keywords.txt stroke_keywords.h
 		$(AM_V_GEN) \
-		$(GPERF) -m 10 -D -C -G -t < $(srcdir)/stroke_keywords.txt > $@
+		$(GPERF) -m 10 -D -C -G -t \
+			--output-file=$@ $(srcdir)/stroke_keywords.txt
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
