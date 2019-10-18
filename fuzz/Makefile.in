@@ -217,6 +217,7 @@ ECHO_T = @ECHO_T@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 FGREP = @FGREP@
+FUZZING_CFLAGS = @FUZZING_CFLAGS@
 FUZZING_LDFLAGS = @FUZZING_LDFLAGS@
 GEM = @GEM@
 GENHTML = @GENHTML@
@@ -425,6 +426,7 @@ urandom_device = @urandom_device@
 xml_CFLAGS = @xml_CFLAGS@
 xml_LIBS = @xml_LIBS@
 AM_CPPFLAGS = @CPPFLAGS@ \
+	@FUZZING_CFLAGS@ \
 	-I$(top_srcdir)/src/libstrongswan \
 	-I$(top_srcdir)/src/libimcv \
 	-I$(top_srcdir)/src/libtncif \

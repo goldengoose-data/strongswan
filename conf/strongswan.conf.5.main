@@ -1821,6 +1821,37 @@ PRIORITY MANAGEMENT in
 
 
 .TP
+.BR charon.rdn_matching " [strict]"
+How RDNs in subject DNs of certificates are matched against configured
+identities. Possible values are
+.RI "" "strict" ""
+(the default),
+.RI "" "reordered" ","
+and
+.RI "" "relaxed" "."
+With
+.RI "" "strict" ""
+the number, type and order of all RDNs has to match,
+wildcards (*) for the values of RDNs are allowed (that's the case for all three
+variants). Using
+.RI "" "reordered" ""
+also matches DNs if the RDNs appear in a different
+order, the number and type still has to match. Finally,
+.RI "" "relaxed" ""
+also allows
+matches of DNs that contain more RDNs than the configured identity (missing RDNs
+are treated like a wildcard match).
+
+Note that
+.RI "" "reordered" ""
+and
+.RI "" "relaxed" ""
+impose a considerable overhead on memory
+usage and runtime, in particular, for mismatches, compared to
+.RI "" "static" "."
+
+
+.TP
 .BR charon.receive_delay " [0]"
 Delay in ms for receiving packets, to simulate larger RTT.
 
