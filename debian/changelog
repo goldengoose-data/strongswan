@@ -1,9 +1,9 @@
-strongswan (5.8.0-3) UNRELEASED; urgency=medium
+strongswan (5.8.1-1) UNRELEASED; urgency=medium
 
-  * d/salsa-ci.yml: disable blhc tests
   * d/rules: disable http and stream tests under CI
+  * New upstream version 5.8.1
 
- -- Yves-Alexis Perez <corsac@debian.org>  Tue, 08 Oct 2019 09:44:57 +0200
+ -- Yves-Alexis Perez <corsac@debian.org>  Fri, 18 Oct 2019 16:39:27 +0200
 
 strongswan (5.8.0-2) unstable; urgency=medium
 
