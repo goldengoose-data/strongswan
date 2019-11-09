@@ -1,0 +1,18 @@
+--- a/src/libcharon/sa/ikev1/iv_manager.c
++++ b/src/libcharon/sa/ikev1/iv_manager.c
+@@ -201,6 +201,7 @@
+ 	if (this->ivs->get_count(this->ivs) > this->max_exchanges &&
+ 		this->ivs->remove_last(this->ivs, (void**)&iv) == SUCCESS)
+ 	{
++		DBG4(DBG_IKE, "%s: exceeded %d IVs: dropping IV for MID %u", __func__, this->max_exchanges, iv->mid);
+ 		iv_data_destroy(iv);
+ 	}
+ 	return found;
+@@ -295,6 +296,7 @@
+ 	if (this->qms->get_count(this->qms) > this->max_exchanges &&
+ 		this->qms->remove_last(this->qms, (void**)&qm) == SUCCESS)
+ 	{
++		DBG4(DBG_IKE, "%s: exceeded %d IVs: dropping IV for MID %u", __func__, this->max_exchanges, qm->mid);
+ 		qm_data_destroy(qm);
+ 	}
+ }

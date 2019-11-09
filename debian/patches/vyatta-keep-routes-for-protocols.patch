@@ -1,0 +1,16 @@
+--- a/src/libcharon/plugins/kernel_netlink/kernel_netlink_ipsec.c
++++ b/src/libcharon/plugins/kernel_netlink/kernel_netlink_ipsec.c
+@@ -2743,12 +2743,10 @@
+ 	/* install a route, if:
+ 	 * - this is an outbound policy (to just get one for each child)
+ 	 * - routing is not disabled via strongswan.conf
+-	 * - the selector is not for a specific protocol/port
+ 	 * - we are in tunnel/BEET mode or install a bypass policy
+ 	 */
+ 	if (policy->direction == POLICY_OUT && this->install_routes &&
+-		(policy->sel.prefixlen_s != 0 || ipsec->mark.value == 0) &&
+-		!policy->sel.proto && !policy->sel.dport && !policy->sel.sport)
++		(policy->sel.prefixlen_s != 0 || ipsec->mark.value == 0))
+ 	{
+ 		if (mapping->type == POLICY_PASS ||
+ 		   (mapping->type == POLICY_IPSEC && ipsec->cfg.mode != MODE_TRANSPORT))

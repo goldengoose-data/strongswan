@@ -1,0 +1,18 @@
+Subject: stroke: print host ports
+
+Print host ports to gather NAT source/destination port as in pluto.
+---
+ src/libcharon/plugins/stroke/stroke_list.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+--- a/src/libcharon/plugins/stroke/stroke_list.c
++++ b/src/libcharon/plugins/stroke/stroke_list.c
+@@ -113,7 +113,7 @@
+ 		fprintf(out, " %V ago", &now, &established);
+ 	}
+ 
+-	fprintf(out, ", %H[%Y]...%H[%Y]\n",
++	fprintf(out, ", %#H[%Y]...%#H[%Y]\n",
+ 			ike_sa->get_my_host(ike_sa), ike_sa->get_my_id(ike_sa),
+ 			ike_sa->get_other_host(ike_sa), ike_sa->get_other_id(ike_sa));
+ 

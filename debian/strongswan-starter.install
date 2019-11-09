@@ -15,4 +15,13 @@ usr/lib/ipsec/stroke
 usr/lib/ipsec/plugins/libstrongswan-stroke.so
 usr/share/strongswan/templates/config/plugins/stroke.conf
 etc/strongswan.d/charon/stroke.conf
+#DANOS
+usr/lib/ipsec/_include                                                      usr/lib/ipsec/
+usr/lib/ipsec/_keycensor                                                      usr/lib/ipsec/
+usr/lib/ipsec/_secretcensor                                                      usr/lib/ipsec/
+usr/lib/ipsec/barf                       usr/lib/ipsec/
+usr/share/man/man8/barf.8                     usr/share/man/man8/
+usr/share/man/man8/_include.8                                            usr/share/man/man8/
+usr/share/man/man8/_keycensor.8                                            usr/share/man/man8/
+usr/share/man/man8/_secretcensor.8                                            usr/share/man/man8/
 debian/usr.lib.ipsec.stroke /etc/apparmor.d/

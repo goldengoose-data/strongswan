@@ -1,0 +1,590 @@
+--- a/src/libcharon/encoding/message.c
++++ b/src/libcharon/encoding/message.c
+@@ -1659,7 +1659,7 @@
+  * be empty afterwards).
+  */
+ static status_t generate_message(private_message_t *this, keymat_t *keymat,
+-				generator_t **out_generator, encrypted_payload_t **encrypted)
++				generator_t **out_generator, encrypted_payload_t **encrypted, u_int *payload_count)
+ {
+ 	keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
+ 	generator_t *generator;
+@@ -1672,6 +1672,10 @@
+ 	payload_t *payload, *next;
+ 	bool encrypting = FALSE;
+ 
++	if (payload_count) {
++		*payload_count = 0;
++	}
++
+ 	if (this->exchange_type == EXCHANGE_TYPE_UNDEFINED)
+ 	{
+ 		DBG1(DBG_ENC, "exchange type is not defined");
+@@ -1700,7 +1704,7 @@
+ 	if (keymat && keymat->get_version(keymat) == IKEV1)
+ 	{
+ 		/* get a hash for this message, if any is required */
+-		if (keymat_v1->get_hash_phase2(keymat_v1, &this->public, &hash))
++		if (keymat_v1->get_hash_phase2(keymat_v1, &this->public, &hash, this->is_request))
+ 		{	/* insert a HASH payload as first payload */
+ 			hash_payload_t *hash_payload;
+ 
+@@ -1739,6 +1743,9 @@
+ 	}
+ 
+ 	DBG1(DBG_ENC, "generating %s", get_string(this, str, sizeof(str)));
++	if (payload_count) {
++		*payload_count = this->payloads->get_count(this->payloads);
++	}
+ 
+ 	if (keymat)
+ 	{
+@@ -1785,16 +1792,70 @@
+ 	return SUCCESS;
+ }
+ 
++static bool is_v1_qm1_or_qm2(private_message_t *this)
++{
++	enumerator_t *enumerator;
++	payload_t *payload;
++	bool is_qm1_or_qm2 = FALSE;
++
++	if (this->exchange_type != QUICK_MODE
++		|| this->first_payload != PLV1_HASH)
++	{
++		return FALSE;
++	}
++
++	enumerator = create_payload_enumerator(this);
++	while (enumerator->enumerate(enumerator, &payload))
++	{
++		if (payload->get_type(payload) == PLV1_SECURITY_ASSOCIATION)
++		{
++			is_qm1_or_qm2 = TRUE;
++		}
++	}
++	enumerator->destroy(enumerator);
++
++	return is_qm1_or_qm2;
++}
++
++static bool is_v1_qm2(private_message_t *this)
++{
++	return (!this->is_request && is_v1_qm1_or_qm2(this));
++}
++
++static bool is_v1_qm3(private_message_t *this, encrypted_payload_t *encrypted, u_int payload_count)
++{
++	enumerator_t *enumerator;
++	payload_t *payload;
++
++	if (this->exchange_type != QUICK_MODE || !this->is_request)
++	{
++		return FALSE;
++	}
++
++	DBG4(DBG_ENC, "payload count: %u", payload_count);
++
++	if (payload_count != 1)
++	{
++		DBG4(DBG_ENC, "message could be QM1");
++		return FALSE;
++	}
++
++	DBG4(DBG_ENC, "message looks like QM3");
++	return TRUE;
++}
++
+ /**
+  * Encrypts and adds the encrypted payload (if any) to the payload list and
+  * finalizes the message generation.  Destroys the given generator.
+  */
+ static status_t finalize_message(private_message_t *this, keymat_t *keymat,
+-						generator_t *generator, encrypted_payload_t *encrypted)
++						generator_t *generator, encrypted_payload_t *encrypted, u_int payload_count)
+ {
+ 	keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
+ 	chunk_t chunk;
+ 	uint32_t *lenpos;
++	bool prepare_for_qm2_retransmit = FALSE;
++
+ 
+ 	if (encrypted)
+ 	{
+@@ -1806,6 +1867,13 @@
+ 				encrypted->destroy(encrypted);
+ 				return FAILED;
+ 			}
++
++			/* is QM3 */
++			if (is_v1_qm3(this, encrypted, payload_count))
++			{
++				prepare_for_qm2_retransmit = TRUE;
++			}
++
+ 		}
+ 		else
+ 		{	/* build associated data (without header of encrypted payload) */
+@@ -1821,24 +1889,33 @@
+ 		}
+ 		generator->generate_payload(generator, &encrypted->payload_interface);
+ 	}
++
+ 	chunk = generator->get_chunk(generator, &lenpos);
+ 	htoun32(lenpos, chunk.len);
+ 	this->packet->set_data(this->packet, chunk_clone(chunk));
+ 	if (this->is_encrypted && this->exchange_type != INFORMATIONAL_V1)
+ 	{
+-		/* update the IV for the next IKEv1 message */
+-		chunk_t last_block;
+-		aead_t *aead;
+-		size_t bs;
+-
+-		aead = keymat->get_aead(keymat, FALSE);
+-		bs = aead->get_block_size(aead);
+-		last_block = chunk_create(chunk.ptr + chunk.len - bs, bs);
+-		if (!keymat_v1->update_iv(keymat_v1, this->message_id, last_block) ||
+-			!keymat_v1->confirm_iv(keymat_v1, this->message_id))
++		if (prepare_for_qm2_retransmit)
+ 		{
+-			generator->destroy(generator);
+-			return FAILED;
++			DBG4(DBG_ENC, "this is QM3, so not updating IV. Reverting it back to QM2 IV");
++			keymat_v1->confirm_iv(keymat_v1, this->message_id);
++		}
++		else
++		{
++			/* update the IV for the next IKEv1 message */
++			chunk_t last_block;
++			aead_t *aead;
++			size_t bs;
++
++			aead = keymat->get_aead(keymat, FALSE);
++			bs = aead->get_block_size(aead);
++			last_block = chunk_create(chunk.ptr + chunk.len - bs, bs);
++			if (!keymat_v1->update_iv(keymat_v1, this->message_id, last_block) ||
++				!keymat_v1->confirm_iv(keymat_v1, this->message_id))
++			{
++				generator->destroy(generator);
++				return FAILED;
++			}
+ 		}
+ 	}
+ 	generator->destroy(generator);
+@@ -1851,14 +1928,15 @@
+ 	generator_t *generator = NULL;
+ 	encrypted_payload_t *encrypted = NULL;
+ 	status_t status;
++	u_int payload_count = 0;
+ 
+-	status = generate_message(this, keymat, &generator, &encrypted);
++	status = generate_message(this, keymat, &generator, &encrypted, &payload_count);
+ 	if (status != SUCCESS)
+ 	{
+ 		DESTROY_IF(generator);
+ 		return status;
+ 	}
+-	status = finalize_message(this, keymat, generator, encrypted);
++	status = finalize_message(this, keymat, generator, encrypted, payload_count);
+ 	if (status != SUCCESS)
+ 	{
+ 		return status;
+@@ -1982,6 +2060,7 @@
+ 	status_t status;
+ 	uint32_t *lenpos;
+ 	size_t len;
++	u_int payload_count = 0;
+ 
+ 	src = this->packet->get_source(this->packet);
+ 	dst = this->packet->get_destination(this->packet);
+@@ -2011,7 +2090,7 @@
+ 	}
+ 	else
+ 	{
+-		status = generate_message(this, keymat, &generator, &encrypted);
++		status = generate_message(this, keymat, &generator, &encrypted, &payload_count);
+ 		if (status != SUCCESS)
+ 		{
+ 			DESTROY_IF(generator);
+@@ -2028,7 +2107,7 @@
+ 	{
+ 		if (generator)
+ 		{
+-			status = finalize_message(this, keymat, generator, encrypted);
++			status = finalize_message(this, keymat, generator, encrypted, payload_count);
+ 			if (status != SUCCESS)
+ 			{
+ 				return status;
+@@ -2047,7 +2126,7 @@
+ 	{
+ 		if (generator)
+ 		{
+-			status = finalize_message(this, keymat, generator, encrypted);
++			status = finalize_message(this, keymat, generator, encrypted, payload_count);
+ 			if (status != SUCCESS)
+ 			{
+ 				return status;
+@@ -2662,7 +2741,7 @@
+ 		keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
+ 		chunk_t hash;
+ 
+-		if (keymat_v1->get_hash_phase2(keymat_v1, &this->public, &hash))
++		if (keymat_v1->get_hash_phase2(keymat_v1, &this->public, &hash, !this->is_request))
+ 		{
+ 			hash_payload_t *hash_payload;
+ 			chunk_t other_hash;
+@@ -2694,11 +2773,38 @@
+ 			chunk_free(&hash);
+ 		}
+ 		if (this->is_encrypted && this->exchange_type != INFORMATIONAL_V1)
+-		{	/* message verified, confirm IV */
++		{
++			/* message verified, confirm IV. But also prepare for QM3 */
++			/* 1. get a copy of the original QM2 IV, before it get wipped
++		           2. restore it for QM3 finalize_message, into last_block
++			   3. finalize of QM3 then turns last_block into the actual IV, to handle QM2 rentransmits
++			*/
++
++			chunk_t iv_backup;
++			if (is_v1_qm2(this))
++			{
++
++				if (!keymat_v1->get_iv(keymat_v1, this->message_id, &iv_backup))
++				{
++					DBG1(DBG_ENC, "Could not get IV backup to prepare for QM3");
++					return FAILED;
++				}
++				iv_backup = chunk_clone(iv_backup);
++			}
++
+ 			if (!keymat_v1->confirm_iv(keymat_v1, this->message_id))
+ 			{
+ 				return FAILED;
+ 			}
++
++			if (is_v1_qm2(this))
++			{
++				if (!keymat_v1->update_iv(keymat_v1, this->message_id, iv_backup))
++				{
++					DBG1(DBG_ENC, "Could not get IV to prepare for QM3");
++					return FAILED;
++				}
++			}
+ 		}
+ 	}
+ 	return SUCCESS;
+--- a/src/libcharon/sa/ikev1/keymat_v1.c
++++ b/src/libcharon/sa/ikev1/keymat_v1.c
+@@ -767,8 +767,14 @@
+ 	return generator->get_chunk(generator, &lenpos);
+ }
+ 
++METHOD(keymat_v1_t, get_qm_cache, bool,
++	private_keymat_v1_t *this, uint32_t mid, bool *is_initiator)
++{
++	return this->iv_manager->get_qm_cache(this->iv_manager, mid, is_initiator);
++}
++
+ METHOD(keymat_v1_t, get_hash_phase2, bool,
+-	private_keymat_v1_t *this, message_t *message, chunk_t *hash)
++	private_keymat_v1_t *this, message_t *message, chunk_t *hash, bool is_initiator)
+ {
+ 	uint32_t mid, mid_n;
+ 	chunk_t data = chunk_empty, *n_i, *n_r;
+@@ -796,7 +802,7 @@
+ 		case QUICK_MODE:
+ 		{
+ 			this->iv_manager->lookup_quick_mode(this->iv_manager, mid, &n_i,
+-												&n_r);
++										&n_r, is_initiator);
+ 			if (!n_i->ptr)
+ 			{	/* Hash(1) = prf(SKEYID_a, M-ID | Message after HASH payload) */
+ 				name = "Hash(1)";
+@@ -821,8 +827,10 @@
+ 				data = chunk_cata("cccc", octet_0, chunk_from_thing(mid_n),
+ 								  *n_i, *n_r);
+ 				add_message = FALSE;
+-				/* we don't need the state anymore */
+-				this->iv_manager->remove_quick_mode(this->iv_manager, mid);
++
++				/* delete, to cope with retransmits of QM2 */
++				chunk_free(n_r);
++				*n_r = chunk_empty;
+ 			}
+ 			break;
+ 		}
+@@ -941,6 +949,7 @@
+ 			.get_hasher = _get_hasher,
+ 			.get_hash = _get_hash,
+ 			.get_hash_phase2 = _get_hash_phase2,
++			.get_qm_cache = _get_qm_cache,
+ 			.get_iv = _get_iv,
+ 			.update_iv = _update_iv,
+ 			.confirm_iv = _confirm_iv,
+--- a/src/libcharon/sa/ikev1/keymat_v1.h
++++ b/src/libcharon/sa/ikev1/keymat_v1.h
+@@ -116,9 +116,12 @@
+ 	 *
+ 	 * @param message		message to generate the HASH data for
+ 	 * @param hash			chunk receiving allocated hash data
++	 * @param is_initiator		indicate if the initator/responder context
+ 	 * @return				TRUE if hash allocated successfully
+ 	 */
+-	bool (*get_hash_phase2)(keymat_v1_t *this, message_t *message, chunk_t *hash);
++	bool (*get_hash_phase2)(keymat_v1_t *this, message_t *message, chunk_t *hash, bool is_initiator);
++	bool (*get_qm_cache)(keymat_v1_t *this, uint32_t mid, bool *is_initiator);
++
+ 
+ 	/**
+ 	 * @see iv_manager_t.get_iv
+--- a/src/libcharon/sa/ikev1/task_manager_v1.c
++++ b/src/libcharon/sa/ikev1/task_manager_v1.c
+@@ -32,6 +32,7 @@
+ #include <sa/ikev1/tasks/isakmp_cert_post.h>
+ #include <sa/ikev1/tasks/isakmp_delete.h>
+ #include <sa/ikev1/tasks/isakmp_dpd.h>
++#include <sa/ikev1/keymat_v1.h>
+ 
+ #include <processing/jobs/retransmit_job.h>
+ #include <processing/jobs/delete_ike_sa_job.h>
+@@ -879,6 +880,41 @@
+ 	response->destroy(response);
+ }
+ 
++static void send_qm3(private_task_manager_t *this, message_t *request)
++{
++	message_t *response;
++	array_t *packets = NULL;
++	host_t *me, *other;
++	uint32_t mid;
++
++	response = message_create(IKEV1_MAJOR_VERSION, IKEV1_MINOR_VERSION);
++	response->set_exchange_type(response, QUICK_MODE);
++	response->set_request(response, TRUE);
++	response->set_message_id(response, response->get_message_id(request));
++
++	me = this->ike_sa->get_my_host(this->ike_sa);
++	if (me->is_anyaddr(me))
++	{
++		me = request->get_destination(request);
++		this->ike_sa->set_my_host(this->ike_sa, me->clone(me));
++	}
++	other = this->ike_sa->get_other_host(this->ike_sa);
++	if (other->is_anyaddr(other))
++	{
++		other = request->get_source(request);
++		this->ike_sa->set_other_host(this->ike_sa, other->clone(other));
++	}
++	response->set_source(response, me->clone(me));
++	response->set_destination(response, other->clone(other));
++	if (generate_message(this, response, &packets))
++	{
++		send_packets(this, packets);
++	}
++	clear_packets(packets);
++	array_destroy(packets);
++	response->destroy(response);
++}
++
+ /**
+  * Process a DPD request/response
+  */
+@@ -1161,6 +1197,7 @@
+ 	message_t *queued;
+ 	status_t status;
+ 	task_t *task;
++	uint32_t mid = message->get_message_id(message);
+ 
+ 	if (message->get_exchange_type(message) != this->initiating.type)
+ 	{
+@@ -1173,11 +1210,6 @@
+ 			DBG1(DBG_IKE, "ignoring fourth Quick Mode message");
+ 			return SUCCESS;
+ 		}
+-		DBG1(DBG_IKE, "received %N response, but expected %N",
+-			 exchange_type_names, message->get_exchange_type(message),
+-			 exchange_type_names, this->initiating.type);
+-		charon->bus->ike_updown(charon->bus, this->ike_sa, FALSE);
+-		return DESTROY_ME;
+ 	}
+ 
+ 	enumerator = this->active_tasks->create_enumerator(this->active_tasks);
+@@ -1364,16 +1396,20 @@
+ 				send_packets(this, this->initiating.packets);
+ 				return SUCCESS;
+ 			}
+-			DBG1(DBG_IKE, "received retransmit of response with ID %u, "
+-				 "but next request already sent", mid);
+-			return SUCCESS;
+ 		}
+ 	}
+ 
++	keymat_v1_t *keymat_v1 = (keymat_v1_t*) this->ike_sa->get_keymat(this->ike_sa);
++	bool found, is_initiator = FALSE;
++
++	found = keymat_v1->get_qm_cache(keymat_v1, mid, &is_initiator);
++
++
+ 	if ((mid && mid == this->initiating.mid) ||
+ 		(this->initiating.mid == 0 &&
+ 		 msg->get_exchange_type(msg) == this->initiating.type &&
+-		 this->active_tasks->get_count(this->active_tasks)))
++		 this->active_tasks->get_count(this->active_tasks)) ||
++		(found && is_initiator))
+ 	{
+ 		msg->set_request(msg, FALSE);
+ 		charon->bus->message(charon->bus, msg, TRUE, FALSE);
+@@ -1390,13 +1426,22 @@
+ 									time_monotonic(NULL));
+ 		this->ike_sa->update_hosts(this->ike_sa, me, other, TRUE);
+ 		charon->bus->message(charon->bus, msg, TRUE, TRUE);
+-		if (process_response(this, msg) != SUCCESS)
++
++		if (mid && mid != this->initiating.mid && found && is_initiator && msg->get_exchange_type(msg) == QUICK_MODE)
+ 		{
+-			flush(this);
+-			return DESTROY_ME;
++			DBG1(DBG_IKE, "receieved retransmit of QM2 with MID %u", mid);
++			send_qm3(this, msg);
+ 		}
+-		this->initiating.old_hashes[(++this->initiating.old_hash_pos) %
++		else
++		{
++			if (process_response(this, msg) != SUCCESS)
++			{
++				flush(this);
++				return DESTROY_ME;
++			}
++			this->initiating.old_hashes[(++this->initiating.old_hash_pos) %
+ 									MAX_OLD_HASHES] = hash;
++		}
+ 	}
+ 	else
+ 	{
+--- a/src/libcharon/sa/ikev1/iv_manager.c
++++ b/src/libcharon/sa/ikev1/iv_manager.c
+@@ -107,6 +107,10 @@
+ 	 * Nr_b (Nonce from second message).
+ 	 */
+ 	chunk_t n_r;
++	/**
++	 * Is QM initiator
++	 */
++	bool is_initiator;
+ };
+ 
+ /**
+@@ -136,9 +140,11 @@
+ {
+ 	if (iv->mid == 0 || iv->iv.ptr)
+ 	{	/* use last block of previous encrypted message */
++		DBG4(DBG_IKE, "generate_iv: wiping IV for MID %u %B", iv->mid, &iv->iv);
+ 		chunk_free(&iv->iv);
+ 		iv->iv = iv->last_block;
+ 		iv->last_block = chunk_empty;
++		DBG4(DBG_IKE, "generate_iv: new IV for MID %u %B", iv->mid, &iv->iv);
+ 	}
+ 	else
+ 	{
+@@ -234,6 +240,7 @@
+ 	iv = lookup_iv(this, mid);
+ 	if (iv)
+ 	{
++		DBG4(DBG_IKE, "get_iv returns IV for MID %u %B", iv->mid, &iv->iv);
+ 		*out = iv->iv;
+ 		return TRUE;
+ 	}
+@@ -246,8 +253,10 @@
+ 	iv_data_t *iv = lookup_iv(this, mid);
+ 	if (iv)
+ 	{	/* update last block */
++		DBG4(DBG_IKE, "update_iv old last_block for MID %u %B", iv->mid, &iv->last_block);
+ 		chunk_free(&iv->last_block);
+ 		iv->last_block = chunk_clone(last_block);
++		DBG4(DBG_IKE, "update_iv new last_block for MID %u %B", iv->mid, &iv->last_block);
+ 		return TRUE;
+ 	}
+ 	return FALSE;
+@@ -265,7 +274,8 @@
+ }
+ 
+ METHOD(iv_manager_t, lookup_quick_mode, void,
+-	private_iv_manager_t *this, uint32_t mid, chunk_t **n_i, chunk_t **n_r)
++	private_iv_manager_t *this, uint32_t mid, chunk_t **n_i, chunk_t **n_r,
++	bool is_initiator)
+ {
+ 	enumerator_t *enumerator;
+ 	qm_data_t *qm, *found = NULL;
+@@ -285,6 +295,7 @@
+ 	{
+ 		INIT(found,
+ 			.mid = mid,
++			.is_initiator = is_initiator,
+ 		);
+ 	}
+ 
+@@ -301,6 +312,30 @@
+ 	}
+ }
+ 
++METHOD(iv_manager_t, get_qm_cache, bool,
++	private_iv_manager_t *this, uint32_t mid, bool *is_initiator)
++{
++	enumerator_t *enumerator;
++	qm_data_t *qm, *found = NULL;
++
++	enumerator = this->qms->create_enumerator(this->qms);
++	while (enumerator->enumerate(enumerator, &qm))
++	{
++		if (qm->mid == mid)
++		{
++			found = qm;
++			break;
++		}
++	}
++
++	if (found && is_initiator) {
++		*is_initiator = found->is_initiator;
++	}
++	enumerator->destroy(enumerator);
++	return !!found;
++}
++
++
+ METHOD(iv_manager_t, remove_quick_mode, void,
+ 	private_iv_manager_t *this, uint32_t mid)
+ {
+@@ -341,6 +376,7 @@
+ 			.update_iv = _update_iv,
+ 			.confirm_iv = _confirm_iv,
+ 			.lookup_quick_mode = _lookup_quick_mode,
++			.get_qm_cache = _get_qm_cache,
+ 			.remove_quick_mode = _remove_quick_mode,
+ 			.destroy = _destroy,
+ 		},
+--- a/src/libcharon/sa/ikev1/iv_manager.h
++++ b/src/libcharon/sa/ikev1/iv_manager.h
+@@ -90,9 +90,22 @@
+ 	 * 						message)
+ 	 * @param n_r			chunk pointer to contain Nr_b (Nonce from second
+ 	 * 						message)
++	 * @param is_initiator		if not found, generate QM state with initiator
++	 *						if set to TRUE
+ 	 */
+ 	void (*lookup_quick_mode)(iv_manager_t *this, uint32_t mid, chunk_t **n_i,
+-							  chunk_t **n_r);
++							  chunk_t **n_r,
++							  bool is_initiator);
++
++	/**
++	 * Try to find a QM for the given message ID.
++	 *
++	 * @param mid			message ID
++	 *
++	 * @param is_initiator		if pointer is set the role of the QM gets stored
++	 * @return				TRUE if a QM state was found
++	 */
++	bool (*get_qm_cache)(iv_manager_t *this, uint32_t mid, bool *is_initiator);
+ 
+ 	/**
+ 	 * Remove the QM for the given message ID.

@@ -1,3 +1,9 @@
+strongswan (5.7.2-1danos1) unstable; urgency=medium
+
+  * DANOS Import 
+
+ -- Vyatta Package Maintainers <DL-vyatta-help@att.com>  Mon, 11 Nov 2019 18:28:50 +0100
+
 strongswan (5.7.2-1) unstable; urgency=medium
 
   * d/control: remove Rene from Uploaders, thanks!

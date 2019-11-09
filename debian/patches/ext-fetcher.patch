@@ -1,0 +1,524 @@
+--- a/src/libstrongswan/Makefile.am
++++ b/src/libstrongswan/Makefile.am
+@@ -656,6 +656,13 @@
+ endif
+ endif
+ 
++if USE_EXT_FETCHER
++  SUBDIRS += plugins/ext_fetcher
++if MONOLITHIC
++  libstrongswan_la_LIBADD += plugins/ext_fetcher/libstrongswan-ext-fetcher.la
++endif
++endif
++
+ if MONOLITHIC
+   SUBDIRS += .
+ endif
+--- /dev/null
++++ b/src/libstrongswan/plugins/ext_fetcher/Makefile.am
+@@ -0,0 +1,16 @@
++AM_CPPFLAGS = \
++        -I$(top_srcdir)/src/libstrongswan
++
++AM_CFLAGS = \
++        $(PLUGIN_CFLAGS)
++
++if MONOLITHIC
++noinst_LTLIBRARIES = libstrongswan-ext-fetcher.la
++else
++plugin_LTLIBRARIES = libstrongswan-ext-fetcher.la
++endif
++
++libstrongswan_ext_fetcher_la_SOURCES = \
++        ext_fetcher_plugin.h ext_fetcher_plugin.c ext_fetcher.c ext_fetcher.h
++
++libstrongswan_ext_fetcher_la_LDFLAGS = -module -avoid-version
+--- /dev/null
++++ b/src/libstrongswan/plugins/ext_fetcher/ext_fetcher.c
+@@ -0,0 +1,273 @@
++/*
++ * Copyright (C) 2018 AT&T Intellectual Property. All rights reserved
++ *
++ * Based on curl fetcher plugin:
++ *
++ * Copyright (C) 2008 Martin Willi
++ * Copyright (C) 2007 Andreas Steffen
++ * HSR Hochschule fuer Technik Rapperswil
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * for more details.
++ */
++
++#define _GNU_SOURCE
++#include <stdio.h>
++
++#include <unistd.h>
++#include <errno.h>
++#include <string.h>
++
++#include <library.h>
++#include <utils/debug.h>
++#include <utils/utils.h>
++#include <utils/process.h>
++
++#include "ext_fetcher.h"
++
++#define CONNECT_TIMEOUT 10
++
++typedef struct private_ext_fetcher_t private_ext_fetcher_t;
++
++/**
++ * private data of a ext_fetcher_t object.
++ */
++struct private_ext_fetcher_t {
++	/**
++	 * Public data
++	 */
++	ext_fetcher_t public;
++
++	/**
++	 * Timeout for a transfer
++	 */
++	long timeout;
++
++	/**
++	 * External script location
++	 */
++	char *script;
++
++	/**
++	 * Maximum number of redirects to follow
++	 */
++	long redir;
++
++	/**
++         * Request_type
++         */
++	char *request_type;
++
++	/**
++	 * Interface to source the fetch from.
++	 */
++	char *interface;
++
++	/**
++	 * POST method
++         */
++        bool post_method;
++
++	/**
++	 * Request data
++	 */
++	chunk_t data;
++};
++
++/**
++ * Allocate and push a format string to the environment
++ */
++static bool push_env(char *envp[], u_int count, char *fmt, ...)
++{
++	int i = 0;
++	char *str;
++	va_list args;
++
++	while (envp[i])
++	{
++		if (++i + 1 >= count)
++		{
++			return FALSE;
++		}
++	}
++	va_start(args, fmt);
++	if (vasprintf(&str, fmt, args) >= 0)
++	{
++		envp[i] = str;
++	}
++	va_end(args);
++	return envp[i] != NULL;
++}
++
++/**
++ * Free all allocated environment strings
++ */
++static void free_env(char *envp[])
++{
++	int i;
++
++	for (i = 0; envp[i]; i++)
++	{
++		free(envp[i]);
++	}
++}
++
++
++METHOD(fetcher_t, fetch, status_t,
++	private_ext_fetcher_t *this, char *uri, void *userdata)
++{
++	char *enc_uri, *p1, *p2, *tmp_file;
++	status_t status;
++	char *envp[32] = {};
++	int outfd, infd, retval;
++	process_t *process;
++	ssize_t len;
++	chunk_t *response = userdata;
++
++	push_env(envp, countof(envp), "MAX_REDIR=%ld", this->redir);
++	push_env(envp, countof(envp), "METHOD=%s", this->post_method ? "POST" : "GET");
++	push_env(envp, countof(envp), "CONNECT_TIMEOUT=%d", CONNECT_TIMEOUT);
++	if (this->timeout)
++	{
++		push_env(envp, countof(envp), "TIMEOUT=%ld", this->timeout);
++	}
++	if (this->interface)
++	{
++		push_env(envp, countof(envp), "INTERFACE=%s", this->interface);
++	}
++	if (this->request_type)
++	{
++		push_env(envp, countof(envp), "REQUEST_TYPE=Content-Type: %s", this->request_type);
++	}
++
++	/* the URI has to be URL-encoded, we only replace spaces as replacing other
++	 * characters (e.g. '/' or ':') would render the URI invalid */
++	enc_uri = strreplace(uri, " ", "%20");
++	push_env(envp, countof(envp), "URL=%s", enc_uri);
++
++	/* if the URI contains a username[:password] prefix then mask it */
++	p1 = strstr(uri, "://");
++	p2 = strchr(uri, '@');
++	if (p1 && p2)
++	{
++		DBG2(DBG_LIB, "  sending request to '%.*sxxxx%s'...", p1+3-uri, uri, p2);
++	}
++	else
++	{
++		DBG2(DBG_LIB, "  sending request to '%s'...", uri);
++	}
++
++	process = process_start_shell(envp, &infd, &outfd, NULL, "%s", this->script);
++
++	if (process)
++	{
++		len = write(infd, this->data.ptr, this->data.len);
++		if (len != this->data.len)
++		{
++			DBG1(DBG_LIB, "error feeding the ext-fetcher script with request-data: %s", strerror(errno));
++		}
++		close(infd);
++
++		if (!chunk_from_fd(outfd, response))
++		{
++			DBG1(DBG_LIB, "error reading the ext-fetcher script response: %s", strerror(errno));
++		}
++		close(outfd);
++		if (process->wait(process, &retval))
++		{
++			if (retval == EXIT_SUCCESS)
++			{
++				status = SUCCESS;
++			}
++			else
++			{
++				DBG1(DBG_LIB, "ext-fetcher request failed: %d",
++					 retval);
++				status = FAILED;
++			}
++		}
++	}
++	free_env(envp);
++
++	if (enc_uri != uri)
++	{
++		free(enc_uri);
++	}
++	return status;
++}
++
++METHOD(fetcher_t, set_option, bool,
++	private_ext_fetcher_t *this, fetcher_option_t option, ...)
++{
++	bool supported = TRUE;
++	va_list args;
++
++	va_start(args, option);
++	switch (option)
++	{
++		case FETCH_REQUEST_DATA:
++		{
++			this->post_method = TRUE;
++			this->data = va_arg(args, chunk_t);
++			break;
++		}
++		case FETCH_REQUEST_TYPE:
++		{
++			this->request_type = va_arg(args, char*);
++			break;
++		}
++		case FETCH_TIMEOUT:
++		{
++			this->timeout = va_arg(args, u_int);
++			break;
++		}
++		case FETCH_INTERFACE:
++		{
++			this->interface = va_arg(args, char*);
++			break;
++		}
++		default:
++			supported = FALSE;
++			break;
++	}
++	va_end(args);
++	return supported;
++}
++
++METHOD(fetcher_t, destroy, void,
++	private_ext_fetcher_t *this)
++{
++	free(this);
++}
++
++/*
++ * Described in header.
++ */
++ext_fetcher_t *ext_fetcher_create()
++{
++	private_ext_fetcher_t *this;
++
++	INIT(this,
++		.public = {
++			.interface = {
++				.fetch = _fetch,
++				.set_option = _set_option,
++				.destroy = _destroy,
++			},
++		},
++		.script = lib->settings->get_str(lib->settings, "%s.plugins.ext-fetcher.script",
++										NULL, lib->ns),
++		.redir = lib->settings->get_int(lib->settings, "%s.plugins.ext-fetcher.redir",
++										-1, lib->ns),
++
++	);
++
++	return &this->public;
++}
+--- /dev/null
++++ b/src/libstrongswan/plugins/ext_fetcher/ext_fetcher_plugin.c
+@@ -0,0 +1,79 @@
++/*
++ * Copyright (C) 2018 AT&T Intellectual Property. All rights reserved
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * for more details.
++ */
++
++#include "ext_fetcher_plugin.h"
++
++#include <library.h>
++#include <utils/debug.h>
++#include "ext_fetcher.h"
++
++typedef struct private_ext_fetcher_plugin_t private_ext_fetcher_plugin_t;
++
++/**
++ * private data of ext_fetcher_plugin
++ */
++struct private_ext_fetcher_plugin_t {
++
++	/**
++	 * public functions
++	 */
++	ext_fetcher_plugin_t public;
++};
++
++METHOD(plugin_t, get_name, char*,
++	private_ext_fetcher_plugin_t *this)
++{
++	return "ext-fetcher";
++}
++
++METHOD(plugin_t, get_features, int,
++	private_ext_fetcher_plugin_t *this, plugin_feature_t *features[])
++{
++	static plugin_feature_t f[] = {
++		PLUGIN_REGISTER(FETCHER, ext_fetcher_create),
++			PLUGIN_PROVIDE(FETCHER, "file://"),
++			PLUGIN_PROVIDE(FETCHER, "ftp://"),
++			PLUGIN_PROVIDE(FETCHER, "http://"),
++			PLUGIN_PROVIDE(FETCHER, "https://"),
++	};
++	*features = f;
++	return countof(f);
++
++}
++
++METHOD(plugin_t, destroy, void,
++	private_ext_fetcher_plugin_t *this)
++{
++	free(this);
++}
++
++/*
++ * see header file
++ */
++plugin_t *ext_fetcher_plugin_create()
++{
++	private_ext_fetcher_plugin_t *this;
++
++	INIT(this,
++		.public = {
++			.plugin = {
++				.get_name = _get_name,
++				.get_features = _get_features,
++				.destroy = _destroy,
++			},
++		},
++	);
++
++	return &this->public.plugin;
++}
+--- /dev/null
++++ b/conf/plugins/ext-fetcher.opt
+@@ -0,0 +1,6 @@
++charon.plugins.ext-fetcher.redir = -1
++	Maximum number of redirects followed by the plugin, set to 0 to disable
++	following redirects, set to -1 for no limit.
++
++charon.plugins.ext-fetcher.script =
++	Fetcher shell script.
+--- a/configure.ac
++++ b/configure.ac
+@@ -171,6 +171,7 @@
+ ARG_ENABL_SET([soup],           [enable soup fetcher plugin to fetch from HTTP via libsoup. Requires libsoup.])
+ ARG_ENABL_SET([unbound],        [enable UNBOUND resolver plugin to perform DNS queries via libunbound. Requires libldns and libunbound.])
+ ARG_ENABL_SET([winhttp],        [enable WinHTTP based HTTP/HTTPS fetching plugin.])
++ARG_ENABL_SET([ext-fetcher],    [enable plugin calling an external fetcher script.])
+ # database plugins
+ ARG_ENABL_SET([mysql],          [enable MySQL database support. Requires libmysqlclient_r.])
+ ARG_ENABL_SET([sqlite],         [enable SQLite database support. Requires libsqlite3.])
+@@ -1424,6 +1425,7 @@
+ ADD_PLUGIN([files],                [s charon scepclient pki scripts nm cmd])
+ ADD_PLUGIN([winhttp],              [s charon pki scripts])
+ ADD_PLUGIN([soup],                 [s charon pki scripts nm cmd])
++ADD_PLUGIN([ext-fetcher],          [c charon cpki scripts])
+ ADD_PLUGIN([mysql],                [s charon pool manager medsrv attest])
+ ADD_PLUGIN([sqlite],               [s charon pool manager medsrv attest])
+ ADD_PLUGIN([attr],                 [c charon])
+@@ -1535,6 +1537,7 @@
+ AM_CONDITIONAL(USE_UNBOUND, test x$unbound = xtrue)
+ AM_CONDITIONAL(USE_SOUP, test x$soup = xtrue)
+ AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
++AM_CONDITIONAL(USE_EXT_FETCHER, test x$ext_fetcher = xtrue)
+ AM_CONDITIONAL(USE_AES, test x$aes = xtrue)
+ AM_CONDITIONAL(USE_DES, test x$des = xtrue)
+ AM_CONDITIONAL(USE_BLOWFISH, test x$blowfish = xtrue)
+@@ -1848,6 +1851,7 @@
+ 	src/libstrongswan/plugins/winhttp/Makefile
+ 	src/libstrongswan/plugins/unbound/Makefile
+ 	src/libstrongswan/plugins/soup/Makefile
++	src/libstrongswan/plugins/ext_fetcher/Makefile
+ 	src/libstrongswan/plugins/ldap/Makefile
+ 	src/libstrongswan/plugins/mysql/Makefile
+ 	src/libstrongswan/plugins/sqlite/Makefile
+--- /dev/null
++++ b/src/libstrongswan/plugins/ext_fetcher/ext_fetcher.h
+@@ -0,0 +1,41 @@
++/*
++ * Copyright (C) 2018 AT&T Intellectual Property. All rights reserved
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * for more details.
++ */
++
++/**
++ * @defgroup ext_fetcher ext_fetcher
++ * @{ @ingroup ext_p
++ */
++
++#ifndef EXT_FETCHER_H_
++#define EXT_FETCHER_H_
++
++typedef struct ext_fetcher_t ext_fetcher_t;
++
++/**
++ * Fetcher implementation using libcurl
++ */
++struct ext_fetcher_t {
++
++	/**
++	 * Implements fetcher interface
++	 */
++	fetcher_t interface;
++};
++
++/**
++ * Create a ext_fetcher instance.
++ */
++ext_fetcher_t *ext_fetcher_create();
++
++#endif /** EXT_FETCHER_H_ @}*/
+--- /dev/null
++++ b/src/libstrongswan/plugins/ext_fetcher/ext_fetcher_plugin.h
+@@ -0,0 +1,41 @@
++/*
++ * Copyright (C) 2018 AT&T Intellectual Property. All rights reserved
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation; either version 2 of the License, or (at your
++ * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
++ *
++ * This program is distributed in the hope that it will be useful, but
++ * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
++ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
++ * for more details.
++ */
++
++/**
++ * @defgroup ext_fetcher_p curl
++ * @ingroup plugins
++ *
++ * @defgroup ext_fetcher_plugin ext_fetcher_plugin
++ * @{ @ingroup ext_fetcher_p
++ */
++
++#ifndef EXT_PLUGIN_H_
++#define EXT_PLUGIN_H_
++
++#include <plugins/plugin.h>
++
++typedef struct ext_fetcher_plugin_t ext_fetcher_plugin_t;
++
++/**
++ * Plugin implementing fetcher interface using libcurl http library.
++ */
++struct ext_fetcher_plugin_t {
++
++	/**
++	 * implements plugin interface
++	 */
++	plugin_t plugin;
++};
++
++#endif /** EXT_PLUGIN_H_ @}*/

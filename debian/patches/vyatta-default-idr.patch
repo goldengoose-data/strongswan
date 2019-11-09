@@ -1,0 +1,32 @@
+--- a/src/libcharon/sa/ikev2/tasks/ike_auth.c
++++ b/src/libcharon/sa/ikev2/tasks/ike_auth.c
+@@ -739,7 +739,9 @@
+ {
+ 	auth_cfg_t *cfg, *cand;
+ 	id_payload_t *id_payload;
++	auth_payload_t *auth_payload;
+ 	identification_t *id;
++	const char *default_idr = "%any";
+ 
+ 	if (message->get_exchange_type(message) == IKE_SA_INIT)
+ 	{
+@@ -756,7 +758,18 @@
+ 		}
+ 		else
+ 		{
+-			id = identification_create_from_encoding(ID_ANY, chunk_empty);
++			char myhost[MAXHOSTNAMELEN];
++
++			/* for PSK default IDr to the destination */
++			auth_payload = (auth_payload_t*)message->get_payload(message, PLV2_AUTH);
++			if (auth_payload && auth_payload->get_auth_method(auth_payload) == AUTH_PSK)
++			{
++				snprintf(myhost, sizeof(myhost), "%H",
++						 this->ike_sa->get_my_host(this->ike_sa));
++				default_idr = myhost;
++			}
++			id = identification_create_from_string(default_idr);
++			DBG1(DBG_IKE, "Optional IDr payload omitted - default to %Y",id);
+ 		}
+ 		this->ike_sa->set_my_id(this->ike_sa, id);
+ 	}
