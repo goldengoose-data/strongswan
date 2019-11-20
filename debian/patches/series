@@ -31,3 +31,4 @@ ext-fetcher.patch
 stroke-mimic-vici-load-conn.patch
 vyatta-reduce-dpd-loglevel.patch
 vyatta-systemd-after-network.patch
+vyatta-dataplane-disable-sa-updates.patch
