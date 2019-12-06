@@ -1,0 +1,11 @@
+--- a/src/libcharon/plugins/kernel_netlink/kernel_netlink_ipsec.c
++++ b/src/libcharon/plugins/kernel_netlink/kernel_netlink_ipsec.c
+@@ -1174,7 +1174,7 @@
+ METHOD(kernel_ipsec_t, get_features, kernel_feature_t,
+ 	private_kernel_netlink_ipsec_t *this)
+ {
+-	return KERNEL_ESP_V3_TFC | KERNEL_POLICY_SPI;
++	return KERNEL_POLICY_SPI;
+ }
+ 
+ /**
