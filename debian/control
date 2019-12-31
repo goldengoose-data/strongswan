@@ -62,6 +62,7 @@ Description: strongSwan utility and crypto library
   - aes (AES-128/192/256 cipher software implementation)
   - constraints (X.509 certificate advanced constraint checking)
   - dnskey (Parse RFC 4034 public keys)
+  - drbg (NIST SP-800-90A Deterministic Random Bit Generator)
   - fips-prf (PRF specified by FIPS, used by EAP-SIM/AKA algorithms)
   - gmp (RSA/DH crypto backend based on libgmp)
   - hmac (HMAC wrapper using various hashers)
