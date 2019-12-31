@@ -617,9 +617,22 @@ specified rounds are ordered by their position in the config file/VICI message.
 .TP
 .BR connections.<conn>.remote<suffix>.id " [%any]"
 IKE identity to expect for authentication round. Refer to the
-.RI "" "local" ""
-.RI "" "id" ""
-section for details.
+.RB "" "local" ""
+section's
+.RB "" "id" ""
+keyword for details.
+
+It's possible to use wildcards to match remote identities (e.g.
+.RI "" "*@strongswan.org" ","
+.RI "" "*.strongswan.org" ","
+or
+.RI "" "C=CH,O=strongSwan,CN=*" ")."
+Connections with exact matches are preferred. When using distinguished names
+with wildcards, the
+.RI "" "charon.rdn_matching" ""
+option in
+.RB "" "strongswan.conf" "(5)"
+specifies how RDNs are matched.
 
 .TP
 .BR connections.<conn>.remote<suffix>.eap_id " [id]"
@@ -720,6 +733,16 @@ Optional slot number of the token that stores the CA certificate.
 .TP
 .BR connections.<conn>.remote<suffix>.cacert<suffix>.module " []"
 Optional PKCS#11 module name.
+
+.TP
+.BR connections.<conn>.remote<suffix>.ca_id " []"
+The specified identity must be contained in one (intermediate) CA of the remote
+peer trustchain, either as subject or as subjectAltName. This has the same
+effect as specifying
+.RI "" "cacerts" ""
+to force clients under a CA to specific
+connections; it does not require the CA certificate to be available locally, and
+can be received from the peer during the IKE exchange.
 
 .TP
 .BR connections.<conn>.remote<suffix>.pubkeys " []"

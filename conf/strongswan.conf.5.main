@@ -580,6 +580,11 @@ since the server port is already bound, ICMPs should not be an issue).
 Enable fetching of CERT RRs via DNS.
 
 .TP
+.BR charon.plugins.drbg.max_drbg_requests " [4294967294]"
+Number of pseudo\-random bit requests from the DRBG before an automatic reseeding
+occurs.
+
+.TP
 .BR charon.plugins.duplicheck.enable " [yes]"
 Enable duplicheck plugin (if loaded).
 
@@ -1016,6 +1021,15 @@ table. The format is [!]mark[/mask], where the optional exclamation mark inverts
 the meaning (i.e. the rule only applies to packets that don't match the mark).
 
 .TP
+.BR charon.plugins.kernel-netlink.hw_offload_feature_interface " [lo]"
+If the kernel supports hardware offloading, the plugin needs to find the feature
+flag which represents hardware offloading support for network devices. Using the
+loopback device for this purpose is usually fine, since it should always be
+present. For rare cases in which the loopback device cannot be used to obtain
+the appropriate feature flag, this option can be used to specify an alternative
+interface for offload feature detection.
+
+.TP
 .BR charon.plugins.kernel-netlink.ignore_retransmit_errors " [no]"
 Whether to ignore errors potentially resulting from a retransmission.
 
@@ -1335,11 +1349,6 @@ responder).
 .TP
 .BR charon.plugins.lookip.socket " [unix://${piddir}/charon.lkp]"
 Socket provided by the lookip plugin.
-
-.TP
-.BR charon.plugins.ntru.max_drbg_requests " [4294967294]"
-Number of pseudo\-random bit requests from the DRBG before an automatic reseeding
-occurs.
 
 .TP
 .BR charon.plugins.ntru.parameter_set " [optimum]"
@@ -1805,8 +1814,12 @@ notifies).
 
 .TP
 .BR charon.prefer_temporary_addrs " [no]"
-By default public IPv6 addresses are preferred over temporary ones (RFC 4941),
-to make connections more stable. Enable this option to reverse this.
+By default, permanent IPv6 source addresses are preferred over temporary ones
+(RFC 4941), to make connections more stable. Enable this option to reverse this.
+
+It also affects which IPv6 addresses are announced as additional addresses if
+MOBIKE is used.  If the option is disabled, only permanent addresses are sent,
+and only temporary ones if it is enabled.
 
 .TP
 .BR charon.process_route " [yes]"
@@ -1848,7 +1861,7 @@ and
 .RI "" "relaxed" ""
 impose a considerable overhead on memory
 usage and runtime, in particular, for mismatches, compared to
-.RI "" "static" "."
+.RI "" "strict" "."
 
 
 .TP
