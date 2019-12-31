@@ -138,8 +138,8 @@ am__installdirs = "$(DESTDIR)$(plugindir)"
 LTLIBRARIES = $(noinst_LTLIBRARIES) $(plugin_LTLIBRARIES)
 libstrongswan_ntru_la_LIBADD =
 am_libstrongswan_ntru_la_OBJECTS = ntru_plugin.lo ntru_convert.lo \
-	ntru_drbg.lo ntru_ke.lo ntru_param_set.lo ntru_poly.lo \
-	ntru_public_key.lo ntru_private_key.lo ntru_trits.lo
+	ntru_ke.lo ntru_param_set.lo ntru_poly.lo ntru_public_key.lo \
+	ntru_private_key.lo ntru_trits.lo
 libstrongswan_ntru_la_OBJECTS = $(am_libstrongswan_ntru_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -465,7 +465,6 @@ AM_CFLAGS = \
 libstrongswan_ntru_la_SOURCES = \
 	ntru_plugin.h ntru_plugin.c \
 	ntru_convert.h ntru_convert.c \
-	ntru_drbg.h ntru_drbg.c \
 	ntru_ke.h ntru_ke.c \
 	ntru_param_set.h ntru_param_set.c \
 	ntru_poly.h ntru_poly.c \
@@ -564,7 +563,6 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ntru_convert.Plo@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ntru_drbg.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ntru_ke.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ntru_param_set.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ntru_plugin.Plo@am__quote@
