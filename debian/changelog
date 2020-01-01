@@ -1,4 +1,4 @@
-strongswan (5.8.2-1) UNRELEASED; urgency=medium
+strongswan (5.8.2-1) unstable; urgency=medium
 
   [ Jean-Michel Vourgère ]
   * README.Debian: Fixed typo
@@ -12,7 +12,7 @@ strongswan (5.8.2-1) UNRELEASED; urgency=medium
   * install DRBG plugin to libstrongswan
   * d/control: add ${misc:Pre-Depends} to strongswan-starter
 
- -- Yves-Alexis Perez <corsac@debian.org>  Wed, 01 Jan 2020 14:35:36 +0100
+ -- Yves-Alexis Perez <corsac@debian.org>  Wed, 01 Jan 2020 14:35:46 +0100
 
 strongswan (5.8.1-1) unstable; urgency=medium
 
