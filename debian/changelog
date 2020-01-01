@@ -1,3 +1,19 @@
+strongswan (5.8.2-1) UNRELEASED; urgency=medium
+
+  [ Jean-Michel Vourgère ]
+  * README.Debian: Fixed typo
+
+  [ Yves-Alexis Perez ]
+  * d/control: replace iptables-dev b-dep by libip{4,6}tc-dev (Closes: #946148)
+  * d/watch: use uscan special strings
+  * New upstream version 5.8.2
+  * d/control: update dh compat level to 12
+  * strongswan-nm: update path for dbus service file
+  * install DRBG plugin to libstrongswan
+  * d/control: add ${misc:Pre-Depends} to strongswan-starter
+
+ -- Yves-Alexis Perez <corsac@debian.org>  Wed, 01 Jan 2020 14:35:36 +0100
+
 strongswan (5.8.1-1) unstable; urgency=medium
 
   * d/rules: disable http and stream tests under CI
