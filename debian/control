@@ -206,6 +206,7 @@ Description: strongSwan charon library (extra plugins)
 
 Package: strongswan-starter
 Architecture: any
+Pre-Depends: ${misc:Pre-Depends}
 Depends: adduser,
          libstrongswan (= ${binary:Version}),
          lsb-base (>= 3.0-6),
