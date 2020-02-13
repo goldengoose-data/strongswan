@@ -1,9 +1,9 @@
-strongswan (5.8.2-2) UNRELEASED; urgency=medium
+strongswan (5.8.2-2) unstable; urgency=medium
 
   * d/control: replace libip{4,6}tc-dev by libiptc-dev (Closes: #951016)
   * d/copyright updated
 
- -- Yves-Alexis Perez <corsac@debian.org>  Thu, 13 Feb 2020 22:46:32 +0100
+ -- Yves-Alexis Perez <corsac@debian.org>  Thu, 13 Feb 2020 22:46:40 +0100
 
 strongswan (5.8.2-1) unstable; urgency=medium
 
