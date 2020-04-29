@@ -32,6 +32,11 @@ in the
 section.
 
 .TP
+.BR charon.accept_private_algs " [no]"
+Deliberately violate the IKE standard's requirement and allow the use of private
+algorithm identifiers, even if the peer implementation is unknown.
+
+.TP
 .BR charon.accept_unencrypted_mainmode_messages " [no]"
 Accept unencrypted ID and HASH payloads in IKEv1 Main Mode.
 
@@ -1200,7 +1205,7 @@ certificates.
 
 .TP
 .BR charon.plugins.load-tester.delay " [0]"
-Delay between initiatons for each thread.
+Delay between initiations for each thread.
 
 .TP
 .BR charon.plugins.load-tester.delete_after_established " [no]"
@@ -1252,7 +1257,7 @@ Address to initiate from.
 
 .TP
 .BR charon.plugins.load-tester.initiator_auth " [pubkey]"
-Authentication method(s) the intiator uses.
+Authentication method(s) the initiator uses.
 
 .TP
 .BR charon.plugins.load-tester.initiator_id " []"
