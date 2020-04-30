@@ -1,10 +1,10 @@
-strongswan (5.8.4-1) UNRELEASED; urgency=medium
+strongswan (5.8.4-1) unstable; urgency=medium
 
   * New upstream version 5.8.4 (Closes: #956446)
   * d/rules: drop --as-needed from linker flags
   * d/control: update standards version to 4.5.0
 
- -- Yves-Alexis Perez <corsac@debian.org>  Thu, 30 Apr 2020 08:56:40 +0200
+ -- Yves-Alexis Perez <corsac@debian.org>  Thu, 30 Apr 2020 08:57:26 +0200
 
 strongswan (5.8.2-2) unstable; urgency=medium
 
