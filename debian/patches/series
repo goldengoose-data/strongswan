@@ -33,3 +33,4 @@ vyatta-reduce-dpd-loglevel.patch
 vyatta-systemd-after-network.patch
 vyatta-dataplane-disable-sa-updates.patch
 vyatta-tfc-notsupported.patch
+Add-compile-option-to-disable-internal-handling-of-f.patch
