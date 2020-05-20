@@ -1,0 +1,46 @@
+From 71b22c250fb98550285e614ea6e2728194579837 Mon Sep 17 00:00:00 2001
+From: Shmulik Ladkani <shmulik@nsof.io>
+Date: Tue, 19 Feb 2019 13:31:11 +0200
+Subject: [PATCH] vici: Fix wrong argument order for terminate_ike() in
+ clear_start_action()
+
+In 7b7290977 ("controller: Add option to force destruction of an IKE_SA")
+the 'force' option was added as 3rd parameter to controller_t::terminate_ike.
+
+However in vici's 'clear_start_action', the argument was incorrectly
+placed as the 2nd parameter - constantly sending 0 (FALSE) as the
+'unique_id' to terminate, rendering calls to 'handle_start_actions'
+having undo=TRUE being unable to terminate the relevant conn.
+
+For example, this is log of such a bogus 'unload-conn':
+
+  strongswan[498]: 13[CFG] vici client 96 requests: unload-conn
+  strongswan[498]: 13[CFG] closing IKE_SA #9
+  strongswan[498]: 13[IKE] unable to terminate IKE_SA: ID 0 not found
+  strongswan[498]: 09[CFG] vici client 96 disconnected
+
+here, the unloaded conn's IKE id was 9, alas 'terminate_ike_execute'
+reports failure to terminate "ID 0".
+
+Fix by passing 'id, FALSE' arguments in the correct order.
+
+Fixes: 7b7290977 ("controller: Add option to force destruction of an IKE_SA")
+Signed-off-by: Shmulik Ladkani <shmulik@metanetworks.com>
+Closes strongswan/strongswan#127.
+---
+ src/libcharon/plugins/vici/vici_config.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+--- a/src/libcharon/plugins/vici/vici_config.c
++++ b/src/libcharon/plugins/vici/vici_config.c
+@@ -2180,8 +2180,8 @@
+ 				while (array_remove(ikeids, ARRAY_HEAD, &id))
+ 				{
+ 					DBG1(DBG_CFG, "closing IKE_SA #%u", id);
+-					charon->controller->terminate_ike(charon->controller, FALSE,
+-													  id, NULL, NULL, 0);
++					charon->controller->terminate_ike(charon->controller, id,
++													  FALSE, NULL, NULL, 0);
+ 				}
+ 				array_destroy(ikeids);
+ 			}

@@ -34,3 +34,4 @@ vyatta-systemd-after-network.patch
 vyatta-dataplane-disable-sa-updates.patch
 vyatta-tfc-notsupported.patch
 Add-compile-option-to-disable-internal-handling-of-f.patch
+vici-Fix-wrong-argument-order-for-terminate_ike-in-c.patch
