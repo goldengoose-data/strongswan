@@ -7,6 +7,11 @@
 0001-task-manager-v1-Add-utility-function-to-check-if-CHI.patch
 0002-ikev1-Don-t-trigger-updown-event-and-close-action-fo.patch
 ikev1_rekey_check_before_installing_as_responder.patch
+# Revert to IKEv1 PSK 5.5.1 behavior
+revert-ikev1-Default-remote-identity-to-any-for-PSK-lookup-.patch
+revert-ikev1-First-do-PSK-lookups-based-on-identities-then-.patch
+revert-stroke-Don-t-ignore-any-as-owner-of-shared-secrets.patch
+
 
 # Vyatta patches
 vyatta-revert-priority-base-changes-for-dataplane.patch
