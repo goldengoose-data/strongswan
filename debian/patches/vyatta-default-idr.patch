@@ -1,6 +1,6 @@
 --- a/src/libcharon/sa/ikev2/tasks/ike_auth.c
 +++ b/src/libcharon/sa/ikev2/tasks/ike_auth.c
-@@ -739,7 +739,9 @@
+@@ -741,7 +741,9 @@
  {
  	auth_cfg_t *cfg, *cand;
  	id_payload_t *id_payload;
@@ -10,7 +10,7 @@
  
  	if (message->get_exchange_type(message) == IKE_SA_INIT)
  	{
-@@ -756,7 +758,18 @@
+@@ -758,7 +760,18 @@
  		}
  		else
  		{

@@ -1,6 +1,6 @@
 --- a/src/libcharon/sa/ike_sa.c
 +++ b/src/libcharon/sa/ike_sa.c
-@@ -781,7 +781,7 @@
+@@ -814,7 +814,7 @@
  		if (!delay || diff >= delay)
  		{
  			/* too long ago, initiate dead peer detection */

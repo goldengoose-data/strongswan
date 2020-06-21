@@ -719,7 +719,7 @@
 +date
 --- a/src/Makefile.am
 +++ b/src/Makefile.am
-@@ -143,3 +143,5 @@
+@@ -146,3 +146,5 @@
  if USE_TPM
    SUBDIRS += tpm_extendpcr
  endif
@@ -727,8 +727,8 @@
 +SUBDIRS += barf _include _keycensor _secretcensor
 --- a/configure.ac
 +++ b/configure.ac
-@@ -2008,6 +2008,10 @@
- 	src/swanctl/Makefile
+@@ -2059,6 +2059,10 @@
+ 	src/xfrmi/Makefile
  	scripts/Makefile
  	testing/Makefile
 +	src/barf/Makefile

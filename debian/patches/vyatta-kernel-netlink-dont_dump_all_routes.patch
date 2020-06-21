@@ -1,6 +1,6 @@
 --- a/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c
 +++ b/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c
-@@ -534,6 +534,11 @@
+@@ -461,6 +461,11 @@
  	 * MSS to set on installed routes
  	 */
  	uint32_t mss;
@@ -12,7 +12,7 @@
  };
  
  /**
-@@ -1943,7 +1948,7 @@
+@@ -1892,7 +1897,7 @@
  	{	/* kernels prior to 3.0 do not support RTA_PREFSRC for IPv6 routes.
  		 * as we want to ignore routes with virtual IPs we cannot use DUMP
  		 * if these routes are not installed in a separate table */
@@ -21,7 +21,7 @@
  		{
  			hdr->nlmsg_flags |= NLM_F_DUMP;
  		}
-@@ -3110,6 +3115,8 @@
+@@ -3151,6 +3156,8 @@
  						"%s.install_virtual_ip_on", NULL, lib->ns),
  		.prefer_temporary_addrs = lib->settings->get_bool(lib->settings,
  						"%s.prefer_temporary_addrs", FALSE, lib->ns),

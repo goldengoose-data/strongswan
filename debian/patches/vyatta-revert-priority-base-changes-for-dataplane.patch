@@ -21,7 +21,7 @@ Date:   Sat Apr 9 16:46:37 2016 +0200
  
  /**
   * Map the limit for bytes and packets to XFRM_INF by default
-@@ -686,66 +686,34 @@
+@@ -631,66 +631,34 @@
  }
  
  /**
@@ -102,16 +102,16 @@ Date:   Sat Apr 9 16:46:37 2016 +0200
  	return priority;
  }
  
-@@ -2853,7 +2821,7 @@
- 	/* cache the assigned IPsec SA */
+@@ -2879,7 +2847,7 @@
  	assigned_sa = policy_sa_create(this, id->dir, data->type, data->src,
- 						data->dst, id->src_ts, id->dst_ts, id->mark, data->sa);
+ 								   data->dst, id->src_ts, id->dst_ts, id->mark,
+ 								   id->if_id, data->sa);
 -	assigned_sa->auto_priority = get_priority(policy, data->prio, id->interface);
 +	assigned_sa->auto_priority = get_priority(policy, data->prio);
  	assigned_sa->priority = this->get_priority ? this->get_priority(id, data)
  											   : data->manual_prio;
  	assigned_sa->priority = assigned_sa->priority ?: assigned_sa->auto_priority;
-@@ -3054,7 +3022,7 @@
+@@ -3086,7 +3054,7 @@
  	current->waiting--;
  
  	/* remove mapping to SA by reqid and priority */

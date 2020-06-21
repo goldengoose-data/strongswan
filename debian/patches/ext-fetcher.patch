@@ -1,6 +1,6 @@
 --- a/src/libstrongswan/Makefile.am
 +++ b/src/libstrongswan/Makefile.am
-@@ -656,6 +656,13 @@
+@@ -680,6 +680,13 @@
  endif
  endif
  
@@ -402,7 +402,7 @@
 +	Fetcher shell script.
 --- a/configure.ac
 +++ b/configure.ac
-@@ -171,6 +171,7 @@
+@@ -183,6 +183,7 @@
  ARG_ENABL_SET([soup],           [enable soup fetcher plugin to fetch from HTTP via libsoup. Requires libsoup.])
  ARG_ENABL_SET([unbound],        [enable UNBOUND resolver plugin to perform DNS queries via libunbound. Requires libldns and libunbound.])
  ARG_ENABL_SET([winhttp],        [enable WinHTTP based HTTP/HTTPS fetching plugin.])
@@ -410,7 +410,7 @@
  # database plugins
  ARG_ENABL_SET([mysql],          [enable MySQL database support. Requires libmysqlclient_r.])
  ARG_ENABL_SET([sqlite],         [enable SQLite database support. Requires libsqlite3.])
-@@ -1424,6 +1425,7 @@
+@@ -1472,6 +1473,7 @@
  ADD_PLUGIN([files],                [s charon scepclient pki scripts nm cmd])
  ADD_PLUGIN([winhttp],              [s charon pki scripts])
  ADD_PLUGIN([soup],                 [s charon pki scripts nm cmd])
@@ -418,7 +418,7 @@
  ADD_PLUGIN([mysql],                [s charon pool manager medsrv attest])
  ADD_PLUGIN([sqlite],               [s charon pool manager medsrv attest])
  ADD_PLUGIN([attr],                 [c charon])
-@@ -1535,6 +1537,7 @@
+@@ -1583,6 +1585,7 @@
  AM_CONDITIONAL(USE_UNBOUND, test x$unbound = xtrue)
  AM_CONDITIONAL(USE_SOUP, test x$soup = xtrue)
  AM_CONDITIONAL(USE_LDAP, test x$ldap = xtrue)
@@ -426,7 +426,7 @@
  AM_CONDITIONAL(USE_AES, test x$aes = xtrue)
  AM_CONDITIONAL(USE_DES, test x$des = xtrue)
  AM_CONDITIONAL(USE_BLOWFISH, test x$blowfish = xtrue)
-@@ -1848,6 +1851,7 @@
+@@ -1897,6 +1900,7 @@
  	src/libstrongswan/plugins/winhttp/Makefile
  	src/libstrongswan/plugins/unbound/Makefile
  	src/libstrongswan/plugins/soup/Makefile

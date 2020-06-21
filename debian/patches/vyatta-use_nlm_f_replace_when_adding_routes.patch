@@ -8,7 +8,7 @@ Besides that there is no need to program a rule to use the main table.
 
 --- a/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c
 +++ b/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c
-@@ -2597,6 +2597,12 @@
+@@ -2594,6 +2594,12 @@
  		return status;
  	}
  
@@ -21,7 +21,7 @@ Besides that there is no need to program a rule to use the main table.
  	memset(&request, 0, sizeof(request));
  
  	hdr = &request.hdr;
-@@ -3006,7 +3012,7 @@
+@@ -3046,7 +3052,7 @@
  	enumerator_t *enumerator;
  	route_entry_t *route;
  
@@ -30,7 +30,7 @@ Besides that there is no need to program a rule to use the main table.
  	{
  		manage_rule(this, RTM_DELRULE, AF_INET, this->routing_table,
  					this->routing_table_prio);
-@@ -3192,7 +3198,7 @@
+@@ -3233,7 +3239,7 @@
  		return NULL;
  	}
  

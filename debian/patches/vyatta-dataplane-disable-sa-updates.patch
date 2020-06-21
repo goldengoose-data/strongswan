@@ -1,6 +1,6 @@
 --- a/src/libcharon/plugins/kernel_netlink/kernel_netlink_ipsec.c
 +++ b/src/libcharon/plugins/kernel_netlink/kernel_netlink_ipsec.c
-@@ -2244,6 +2244,8 @@
+@@ -2215,6 +2215,8 @@
  	traffic_selector_t *ts;
  	char markstr[32] = "";
  

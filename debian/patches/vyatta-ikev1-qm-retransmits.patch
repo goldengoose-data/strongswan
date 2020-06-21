@@ -39,7 +39,7 @@
  
  	if (keymat)
  	{
-@@ -1785,16 +1792,70 @@
+@@ -1798,16 +1805,70 @@
  	return SUCCESS;
  }
  
@@ -111,7 +111,7 @@
  
  	if (encrypted)
  	{
-@@ -1806,6 +1867,13 @@
+@@ -1819,6 +1880,13 @@
  				encrypted->destroy(encrypted);
  				return FAILED;
  			}
@@ -125,7 +125,7 @@
  		}
  		else
  		{	/* build associated data (without header of encrypted payload) */
-@@ -1821,24 +1889,33 @@
+@@ -1834,24 +1902,33 @@
  		}
  		generator->generate_payload(generator, &encrypted->payload_interface);
  	}
@@ -171,7 +171,7 @@
  		}
  	}
  	generator->destroy(generator);
-@@ -1851,14 +1928,15 @@
+@@ -1864,14 +1941,15 @@
  	generator_t *generator = NULL;
  	encrypted_payload_t *encrypted = NULL;
  	status_t status;
@@ -189,7 +189,7 @@
  	if (status != SUCCESS)
  	{
  		return status;
-@@ -1982,6 +2060,7 @@
+@@ -1995,6 +2073,7 @@
  	status_t status;
  	uint32_t *lenpos;
  	size_t len;
@@ -197,7 +197,7 @@
  
  	src = this->packet->get_source(this->packet);
  	dst = this->packet->get_destination(this->packet);
-@@ -2011,7 +2090,7 @@
+@@ -2024,7 +2103,7 @@
  	}
  	else
  	{
@@ -206,7 +206,7 @@
  		if (status != SUCCESS)
  		{
  			DESTROY_IF(generator);
-@@ -2028,7 +2107,7 @@
+@@ -2041,7 +2120,7 @@
  	{
  		if (generator)
  		{
@@ -215,7 +215,7 @@
  			if (status != SUCCESS)
  			{
  				return status;
-@@ -2047,7 +2126,7 @@
+@@ -2060,7 +2139,7 @@
  	{
  		if (generator)
  		{
@@ -224,7 +224,7 @@
  			if (status != SUCCESS)
  			{
  				return status;
-@@ -2662,7 +2741,7 @@
+@@ -2675,7 +2754,7 @@
  		keymat_v1_t *keymat_v1 = (keymat_v1_t*)keymat;
  		chunk_t hash;
  
@@ -233,7 +233,7 @@
  		{
  			hash_payload_t *hash_payload;
  			chunk_t other_hash;
-@@ -2694,11 +2773,38 @@
+@@ -2707,11 +2786,38 @@
  			chunk_free(&hash);
  		}
  		if (this->is_encrypted && this->exchange_type != INFORMATIONAL_V1)
@@ -275,7 +275,7 @@
  	return SUCCESS;
 --- a/src/libcharon/sa/ikev1/keymat_v1.c
 +++ b/src/libcharon/sa/ikev1/keymat_v1.c
-@@ -767,8 +767,14 @@
+@@ -770,8 +770,14 @@
  	return generator->get_chunk(generator, &lenpos);
  }
  
@@ -291,7 +291,7 @@
  {
  	uint32_t mid, mid_n;
  	chunk_t data = chunk_empty, *n_i, *n_r;
-@@ -796,7 +802,7 @@
+@@ -799,7 +805,7 @@
  		case QUICK_MODE:
  		{
  			this->iv_manager->lookup_quick_mode(this->iv_manager, mid, &n_i,
@@ -300,7 +300,7 @@
  			if (!n_i->ptr)
  			{	/* Hash(1) = prf(SKEYID_a, M-ID | Message after HASH payload) */
  				name = "Hash(1)";
-@@ -821,8 +827,10 @@
+@@ -824,8 +830,10 @@
  				data = chunk_cata("cccc", octet_0, chunk_from_thing(mid_n),
  								  *n_i, *n_r);
  				add_message = FALSE;
@@ -313,7 +313,7 @@
  			}
  			break;
  		}
-@@ -941,6 +949,7 @@
+@@ -944,6 +952,7 @@
  			.get_hasher = _get_hasher,
  			.get_hash = _get_hash,
  			.get_hash_phase2 = _get_hash_phase2,
@@ -347,7 +347,7 @@
  
  #include <processing/jobs/retransmit_job.h>
  #include <processing/jobs/delete_ike_sa_job.h>
-@@ -879,6 +880,41 @@
+@@ -891,6 +892,41 @@
  	response->destroy(response);
  }
  
@@ -389,7 +389,7 @@
  /**
   * Process a DPD request/response
   */
-@@ -1161,6 +1197,7 @@
+@@ -1181,6 +1217,7 @@
  	message_t *queued;
  	status_t status;
  	task_t *task;
@@ -397,7 +397,7 @@
  
  	if (message->get_exchange_type(message) != this->initiating.type)
  	{
-@@ -1173,11 +1210,6 @@
+@@ -1193,11 +1230,6 @@
  			DBG1(DBG_IKE, "ignoring fourth Quick Mode message");
  			return SUCCESS;
  		}
@@ -409,7 +409,7 @@
  	}
  
  	enumerator = this->active_tasks->create_enumerator(this->active_tasks);
-@@ -1364,16 +1396,20 @@
+@@ -1384,16 +1416,20 @@
  				send_packets(this, this->initiating.packets);
  				return SUCCESS;
  			}
@@ -434,7 +434,7 @@
  	{
  		msg->set_request(msg, FALSE);
  		charon->bus->message(charon->bus, msg, TRUE, FALSE);
-@@ -1390,13 +1426,22 @@
+@@ -1410,13 +1446,22 @@
  									time_monotonic(NULL));
  		this->ike_sa->update_hosts(this->ike_sa, me, other, TRUE);
  		charon->bus->message(charon->bus, msg, TRUE, TRUE);

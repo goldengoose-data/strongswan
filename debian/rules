@@ -2,7 +2,6 @@
 export DEB_LDFLAGS_MAINT_APPEND=-Wl,-O1
 #export DEB_LDFLAGS_MAINT_APPEND=-Wl,--as-needed -Wl,-O1 -Wl,-z,defs
 export DEB_BUILD_MAINT_OPTIONS=hardening=+all
-export DEB_CFLAGS_MAINT_APPEND=-DDISABLE_SIGNAL_HANDLER
 
 CONFIGUREARGS := --libdir=/usr/lib --libexecdir=/usr/lib \
 		--enable-addrblock \
@@ -98,6 +97,7 @@ CONFIGUREARGS += --with-routing-table=254 \
 	--disable-bypass-lan \
 	--disable-chapoly \
 	--disable-tpm \
+	--disable-drbg \
 	--enable-load-tester
 export PYTHON=python3
 
@@ -148,7 +148,8 @@ ifeq ($(DEB_HOST_ARCH_OS),linux)
 	dh_install -p libstrongswan-extra-plugins usr/share/strongswan/templates/config/plugins/af-alg.conf
 	dh_install -p libstrongswan-extra-plugins etc/strongswan.d/charon/af-alg.conf
 	# the systemd service file only gets generated on Linux
-	dh_install -p strongswan-starter lib/systemd/system/strongswan-starter.service
+	#dh_install -p strongswan-starter lib/systemd/system/strongswan-starter.service
+	rm -f debian/tmp/lib/systemd/system/strongswan-starter.service
 	# XFRM is Linux only
 	dh_install -p strongswan-libcharon usr/lib/ipsec/xfrmi
 endif
@@ -197,7 +198,7 @@ endif
 	rm -rf $(CURDIR)/debian/python3-vici/usr/lib/python*/dist-packages/vici/__pycache__/
 
 	# then install the rest, ignoring the above
-	dh_install --fail-missing \
+	dh_install \
 		-X\.la -X\.a \
 		-Xmedsrv -Xman3 \
 		-Xlibstrongswan-connmark.so -X connmark.conf \
@@ -244,6 +245,7 @@ endif
 	find $(CURDIR)/debian/*strongswan*/ -name "/.svn/" | xargs --no-run-if-empty rm -rf
 
 override_dh_installinit:
+	# DANOS: don't enable sysvinit script
 	dh_installinit -n --name=ipsec
 
 override_dh_installchangelogs:
@@ -281,4 +283,4 @@ override_dh_missing-indep:
 	dh_missing --list-missing
 
 %:
-	dh $@ --parallel --with autoreconf,systemd,python3
+	dh $@ --parallel --with autoreconf,python3
