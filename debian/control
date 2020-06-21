@@ -10,10 +10,14 @@ Build-Depends: bison,
                bzip2,
                debhelper-compat (= 12),
                dh-apparmor,
+               dh-autoreconf,
+               dh-python,
+               dh-systemd (>= 1.5),
                dpkg-dev (>= 1.16.2),
                flex,
                gperf,
                libiptc-dev [linux-any],
+               iptables-dev [linux-any],
                libcap-dev [linux-any],
                libcurl4-openssl-dev | libcurl3-dev | libcurl2-dev,
                libgcrypt20-dev | libgcrypt11-dev,
@@ -29,6 +33,8 @@ Build-Depends: bison,
                libxml2-dev,
                pkg-config,
                po-debconf,
+               python3,
+               python3-setuptools,
                systemd [linux-any],
                tzdata
 Homepage: http://www.strongswan.org
@@ -46,6 +52,8 @@ Description: IPsec VPN solution metapackage
 Package: libstrongswan
 Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
+Breaks: strongswan-starter (<< 5.3.5-2)
+Replaces: strongswan-starter (<< 5.3.5-2)
 Recommends: libstrongswan-standard-plugins
 Suggests: libstrongswan-extra-plugins
 Description: strongSwan utility and crypto library
@@ -90,12 +98,17 @@ Description: strongSwan utility and crypto library
   - kernel-pfroute [kfreebsd] (Networking kernel interface using PF_ROUTE)
   - resolve (Writes name servers received via IKE to a resolv.conf file or
     installs them via resolvconf(8))
+ .
+ Also included is the libtpmtss library adding support for TPM plugin
+ (https://wiki.strongswan.org/projects/strongswan/wiki/TpmPlugin)
 
 Package: libstrongswan-standard-plugins
 Architecture: any
 Depends: libstrongswan (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
+Breaks: libstrongswan (<= 5.1.1-1), strongswan-ike (<= 5.1.1-1)
+Replaces: libstrongswan (<= 5.1.1-1), strongswan-ike (<= 5.1.1-1)
 Description: strongSwan utility and crypto library (standard plugins)
  The strongSwan VPN suite uses the native IPsec stack in the standard
  Linux kernel. It supports both the IKEv1 and IKEv2 protocols.
@@ -288,11 +301,21 @@ Description: standalone IPsec client
  This package contains the charon-cmd command, which can be used as a client to
  connect to a remote IKE daemon.
 
+Package: python3-vici
+Architecture: all
+Depends: ${python3:Depends}, ${misc:Depends}, strongswan-charon
+Section: python
+Priority: extra
+Description: VICI python bindings
+ VICI python bindings for charon.
+
 Package: strongswan-pki
 Architecture: any
 Depends: libstrongswan (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
+Breaks: strongswan-starter (<< 5.3.5-2)
+Replaces: strongswan-starter (<< 5.3.5-2)
 Description: strongSwan IPsec client, pki command
  The strongSwan VPN suite uses the native IPsec stack in the standard
  Linux kernel. It supports both the IKEv1 and IKEv2 protocols.
@@ -305,6 +328,8 @@ Architecture: any
 Depends: libstrongswan (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
+Breaks: strongswan-starter (<< 5.3.5-2)
+Replaces: strongswan-starter (<< 5.3.5-2)
 Description: strongSwan IPsec client, SCEP client
  The strongSwan VPN suite uses the native IPsec stack in the standard
  Linux kernel. It supports both the IKEv1 and IKEv2 protocols.

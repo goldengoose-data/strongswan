@@ -2,6 +2,7 @@
 export DEB_LDFLAGS_MAINT_APPEND=-Wl,-O1
 #export DEB_LDFLAGS_MAINT_APPEND=-Wl,--as-needed -Wl,-O1 -Wl,-z,defs
 export DEB_BUILD_MAINT_OPTIONS=hardening=+all
+export DEB_CFLAGS_MAINT_APPEND=-DDISABLE_SIGNAL_HANDLER
 
 CONFIGUREARGS := --libdir=/usr/lib --libexecdir=/usr/lib \
 		--enable-addrblock \
@@ -85,6 +86,22 @@ ifeq ($(DEB_HOST_ARCH_OS),kfreebsd)
 		--with-group=wheel
 endif
 
+# Additional options for DANOS
+CONFIGUREARGS += --with-routing-table=254 \
+	--with-routing-table-prio=32766 \
+	--disable-aes --enable-python-eggs \
+	--enable-ext-auth \
+	--enable-ext-fetcher \
+	--enable-vici \
+	--disable-aesni \
+	--disable-gmp \
+	--disable-bypass-lan \
+	--disable-chapoly \
+	--disable-tpm \
+	--enable-load-tester
+export PYTHON=python3
+
+
 override_dh_auto_configure:
 	dh_auto_configure -- $(CONFIGUREARGS)
 
@@ -157,9 +174,10 @@ ifeq ($(DEB_HOST_ARCH_CPU),i386)
 	dh_install -p libstrongswan-extra-plugins usr/share/strongswan/templates/config/plugins/rdrand.conf
 	dh_install -p libstrongswan-extra-plugins etc/strongswan.d/charon/rdrand.conf
 
-	dh_install -p libstrongswan-standard-plugins usr/lib/ipsec/plugins/libstrongswan-aesni.so
-	dh_install -p libstrongswan-standard-plugins usr/share/strongswan/templates/config/plugins/aesni.conf
-	dh_install -p libstrongswan-standard-plugins etc/strongswan.d/charon/aesni.conf
+# DANOS: OpenSSL only.
+#	dh_install -p libstrongswan-standard-plugins usr/lib/ipsec/plugins/libstrongswan-aesni.so
+#	dh_install -p libstrongswan-standard-plugins usr/share/strongswan/templates/config/plugins/aesni.conf
+#	dh_install -p libstrongswan-standard-plugins etc/strongswan.d/charon/aesni.conf
 endif
 
 ifeq ($(DEB_HOST_ARCH_CPU), amd64)
@@ -167,13 +185,19 @@ ifeq ($(DEB_HOST_ARCH_CPU), amd64)
 	dh_install -p libstrongswan-extra-plugins usr/share/strongswan/templates/config/plugins/rdrand.conf
 	dh_install -p libstrongswan-extra-plugins etc/strongswan.d/charon/rdrand.conf
 
-	dh_install -p libstrongswan-standard-plugins usr/lib/ipsec/plugins/libstrongswan-aesni.so
-	dh_install -p libstrongswan-standard-plugins usr/share/strongswan/templates/config/plugins/aesni.conf
-	dh_install -p libstrongswan-standard-plugins etc/strongswan.d/charon/aesni.conf
+# DANOS: OpenSSL only.
+#	dh_install -p libstrongswan-standard-plugins usr/lib/ipsec/plugins/libstrongswan-aesni.so
+#	dh_install -p libstrongswan-standard-plugins usr/share/strongswan/templates/config/plugins/aesni.conf
+#	dh_install -p libstrongswan-standard-plugins etc/strongswan.d/charon/aesni.conf
 endif
 
+	# python VICI
+	cd $(CURDIR)/src/libcharon/plugins/vici/python/ && $(PYTHON) setup.py install --install-layout=deb --root=$(CURDIR)/debian/python3-vici
+	rm -rf $(CURDIR)/debian/python3-vici/usr/lib/python*/dist-packages/vici-*.egg-info/
+	rm -rf $(CURDIR)/debian/python3-vici/usr/lib/python*/dist-packages/vici/__pycache__/
+
 	# then install the rest, ignoring the above
-	dh_install \
+	dh_install --fail-missing \
 		-X\.la -X\.a \
 		-Xmedsrv -Xman3 \
 		-Xlibstrongswan-connmark.so -X connmark.conf \
@@ -182,9 +206,11 @@ endif
 		-Xlibstrongswan-farp.so -X farp.conf \
 		-Xlibstrongswan-padlock.so -X padlock.conf \
 		-Xlibstrongswan-rdrand.so -X rdrand.conf \
-		-Xlibstrongswan-aesni.so -X aesni.conf \
 		-Xlibstrongswan-af-alg.so -X af-alg.conf \
 		-Xstrongswan-starter.service
+
+# DANOS: OpenSSL only.
+#		-Xlibstrongswan-aesni.so -X aesni.conf \
 
 	# AppArmor.
 	dh_apparmor --profile-name=usr.lib.ipsec.charon -p strongswan-charon
@@ -218,7 +244,7 @@ endif
 	find $(CURDIR)/debian/*strongswan*/ -name "/.svn/" | xargs --no-run-if-empty rm -rf
 
 override_dh_installinit:
-	dh_installinit --name=ipsec
+	dh_installinit -n --name=ipsec
 
 override_dh_installchangelogs:
 	dh_installchangelogs NEWS
@@ -255,4 +281,4 @@ override_dh_missing-indep:
 	dh_missing --list-missing
 
 %:
-	dh $@
+	dh $@ --parallel --with autoreconf,systemd,python3
