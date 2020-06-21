@@ -834,15 +834,39 @@ static gboolean connect_(NMVpnServicePlugin *plugin, NMConnection *connection,
 	}
 	else
 	{
-		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 		child_cfg->add_proposal(child_cfg, proposal_create_default_aead(PROTO_ESP));
+		child_cfg->add_proposal(child_cfg, proposal_create_default(PROTO_ESP));
 	}
 	ts = traffic_selector_create_dynamic(0, 0, 65535);
 	child_cfg->add_traffic_selector(child_cfg, TRUE, ts);
-	ts = traffic_selector_create_from_cidr("0.0.0.0/0", 0, 0, 65535);
-	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
-	ts = traffic_selector_create_from_cidr("::/0", 0, 0, 65535);
-	child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+	str = nm_setting_vpn_get_data_item(vpn, "remote-ts");
+	if (str && strlen(str))
+	{
+		enumerator = enumerator_create_token(str, ";", "");
+		while (enumerator->enumerate(enumerator, &str))
+		{
+			ts = traffic_selector_create_from_cidr((char*)str, 0, 0, 65535);
+			if (!ts)
+			{
+				g_set_error(err, NM_VPN_PLUGIN_ERROR,
+							NM_VPN_PLUGIN_ERROR_LAUNCH_FAILED,
+							"Invalid remote traffic selector.");
+				enumerator->destroy(enumerator);
+				child_cfg->destroy(child_cfg);
+				peer_cfg->destroy(peer_cfg);
+				return FALSE;
+			}
+			child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+		}
+		enumerator->destroy(enumerator);
+	}
+	else
+	{
+		ts = traffic_selector_create_from_cidr("0.0.0.0/0", 0, 0, 65535);
+		child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+		ts = traffic_selector_create_from_cidr("::/0", 0, 0, 65535);
+		child_cfg->add_traffic_selector(child_cfg, FALSE, ts);
+	}
 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
 
 	/**
@@ -974,6 +998,11 @@ static gboolean do_disconnect(gpointer plugin)
 			enumerator->destroy(enumerator);
 			charon->controller->terminate_ike(charon->controller, id, FALSE,
 											  controller_cb_empty, NULL, 0);
+
+			/* clear secrets as we are asked for new secrets (where we'd find
+			 * the cached secrets from earlier connections) before we clear
+			 * them in connect() */
+			priv->creds->clear(priv->creds);
 			return FALSE;
 		}
 	}
