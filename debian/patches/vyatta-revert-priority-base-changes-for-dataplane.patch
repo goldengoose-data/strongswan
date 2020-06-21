@@ -1,0 +1,122 @@
+commit d3af3b799fd6dd872e305e3a7db5719e1024b9d1
+Author: Andreas Steffen <andreas.steffen@strongswan.org>
+Date:   Sat Apr 9 16:46:37 2016 +0200
+
+    Extended IPsec kernel policy scheme
+    
+    The kernel policy now considers src and dst port masks as well as
+    restictions to a given network interface. The base priority is
+    100'000 for passthrough shunts, 200'000 for IPsec policies,
+    300'000 for IPsec policy traps and 400'000 for fallback drop shunts.
+    The values 1..30'000 can be used for manually set priorities.
+
+--- a/src/libcharon/plugins/kernel_netlink/kernel_netlink_ipsec.c
++++ b/src/libcharon/plugins/kernel_netlink/kernel_netlink_ipsec.c
+@@ -100,7 +100,7 @@
+ #endif
+ 
+ /** Base priority for installed policies */
+-#define PRIO_BASE 200000
++#define PRIO_BASE 384
+ 
+ /**
+  * Map the limit for bytes and packets to XFRM_INF by default
+@@ -686,66 +686,34 @@
+ }
+ 
+ /**
+- * Determine number of set bits in 16 bit port mask
+- */
+-static inline uint32_t port_mask_bits(uint16_t port_mask)
+-{
+-	uint32_t bits;
+-	uint16_t bit_mask = 0x8000;
+-
+-	port_mask = ntohs(port_mask);
+-
+-	for (bits = 0; bits < 16; bits++)
+-	{
+-		if (!(port_mask & bit_mask))
+-		{
+-			break;
+-		}
+-		bit_mask >>= 1;
+-	}
+-	return bits;
+-}
+-
+-/**
+  * Calculate the priority of a policy
+  *
+- * bits 0-0:  separate trap and regular policies (0..1) 1 bit
+- * bits 1-1:  restriction to network interface (0..1)   1 bit
+- * bits 2-7:  src + dst port mask bits (2 * 0..16)      6 bits
+- * bits 8-8:  restriction to protocol (0..1)            1 bit
+- * bits 9-17: src + dst network mask bits (2 * 0..128)  9 bits
+- *                                                     18 bits
+- *
+- * smallest value: 000000000 0 000000 0 0:       0, lowest priority = 200'000
+- * largest value : 100000000 1 100000 1 1: 131'459, highst priority =  68'541
+  */
+-static uint32_t get_priority(policy_entry_t *policy, policy_priority_t prio,
+-							 char *interface)
++static inline uint32_t get_priority(policy_entry_t *policy,
++									 policy_priority_t prio)
+ {
+ 	uint32_t priority = PRIO_BASE, sport_mask_bits, dport_mask_bits;
+ 
+ 	switch (prio)
+ 	{
+ 		case POLICY_PRIORITY_FALLBACK:
+-			priority += PRIO_BASE;
+-			/* fall-through to next case */
++			priority <<= 1;
++			/* fall-through */
+ 		case POLICY_PRIORITY_ROUTED:
++			priority <<= 1;
++			/* fall-through */
+ 		case POLICY_PRIORITY_DEFAULT:
+-			priority += PRIO_BASE;
+-			/* fall-through to next case */
++			priority <<= 1;
++			/* fall-through */
+ 		case POLICY_PRIORITY_PASS:
+ 			break;
+ 	}
+-	sport_mask_bits = port_mask_bits(policy->sel.sport_mask);
+-	dport_mask_bits = port_mask_bits(policy->sel.dport_mask);
+-
+-	/* calculate priority */
+-	priority -= (policy->sel.prefixlen_s + policy->sel.prefixlen_d) * 512;
+-	priority -=  policy->sel.proto ? 256 : 0;
+-	priority -= (sport_mask_bits + dport_mask_bits) * 4;
+-	priority -= (interface != NULL) * 2;
+-	priority -= (prio != POLICY_PRIORITY_ROUTED);
+-
++	/* calculate priority based on selector size, small size = high prio */
++	priority -= policy->sel.prefixlen_s;
++	priority -= policy->sel.prefixlen_d;
++	priority <<= 2; /* make some room for the two flags */
++	priority += policy->sel.sport_mask || policy->sel.dport_mask ? 0 : 2;
++	priority += policy->sel.proto ? 0 : 1;
+ 	return priority;
+ }
+ 
+@@ -2853,7 +2821,7 @@
+ 	/* cache the assigned IPsec SA */
+ 	assigned_sa = policy_sa_create(this, id->dir, data->type, data->src,
+ 						data->dst, id->src_ts, id->dst_ts, id->mark, data->sa);
+-	assigned_sa->auto_priority = get_priority(policy, data->prio, id->interface);
++	assigned_sa->auto_priority = get_priority(policy, data->prio);
+ 	assigned_sa->priority = this->get_priority ? this->get_priority(id, data)
+ 											   : data->manual_prio;
+ 	assigned_sa->priority = assigned_sa->priority ?: assigned_sa->auto_priority;
+@@ -3054,7 +3022,7 @@
+ 	current->waiting--;
+ 
+ 	/* remove mapping to SA by reqid and priority */
+-	auto_priority = get_priority(current, data->prio,id->interface);
++	auto_priority = get_priority(current, data->prio);
+ 	priority = this->get_priority ? this->get_priority(id, data)
+ 								  : data->manual_prio;
+ 	priority = priority ?: auto_priority;

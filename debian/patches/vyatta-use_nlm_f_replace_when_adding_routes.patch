@@ -1,0 +1,41 @@
+Use NLM_F_REPLACE when adding routes to main table
+
+If the main routing table is used the routes should get added with
+NLM_F_REPLACE to not fail if a less-specific route exist in the
+table.
+
+Besides that there is no need to program a rule to use the main table.
+
+--- a/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c
++++ b/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c
+@@ -2597,6 +2597,12 @@
+ 		return status;
+ 	}
+ 
++	if (this->routing_table == RT_TABLE_MAIN &&
++		flags == NLM_F_CREATE|NLM_F_EXCL)
++	{
++		flags = NLM_F_CREATE|NLM_F_REPLACE;
++	}
++
+ 	memset(&request, 0, sizeof(request));
+ 
+ 	hdr = &request.hdr;
+@@ -3006,7 +3012,7 @@
+ 	enumerator_t *enumerator;
+ 	route_entry_t *route;
+ 
+-	if (this->routing_table)
++	if (this->routing_table && this->routing_table != RT_TABLE_MAIN)
+ 	{
+ 		manage_rule(this, RTM_DELRULE, AF_INET, this->routing_table,
+ 					this->routing_table_prio);
+@@ -3192,7 +3198,7 @@
+ 		return NULL;
+ 	}
+ 
+-	if (this->routing_table)
++	if (this->routing_table && this->routing_table != RT_TABLE_MAIN)
+ 	{
+ 		if (manage_rule(this, RTM_NEWRULE, AF_INET, this->routing_table,
+ 						this->routing_table_prio) != SUCCESS)

@@ -1,0 +1,30 @@
+Subject: Don't skip routes from the main routing table
+
+If strongswan is asked to use the main routing table to install routes we
+shouldn't skip the routes in the table for the nexthop detection.
+
+Also when processing route changes based on netlink triggers, we shouldn't
+ignore the changes to the main table even if that is the table Charon is
+using to install new routes.
+
+--- a/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c
++++ b/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c
+@@ -1408,7 +1408,9 @@
+ 	host_t *host = NULL;
+ 
+ 	/* ignore routes added by us or in the local routing table (local addrs) */
+-	if (msg->rtm_table && (msg->rtm_table == this->routing_table ||
++	if (msg->rtm_table &&
++	    ((msg->rtm_table == this->routing_table &&
++	      this->routing_table != RT_TABLE_MAIN) ||
+ 						   msg->rtm_table == RT_TABLE_LOCAL))
+ 	{
+ 		return;
+@@ -1999,6 +2001,7 @@
+ 					continue;
+ 				}
+ 				if (this->routing_table != 0 &&
++					this->routing_table != RT_TABLE_MAIN &&
+ 					route->table == this->routing_table)
+ 				{	/* route is from our own ipsec routing table */
+ 					continue;

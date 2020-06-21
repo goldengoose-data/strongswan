@@ -1,0 +1,134 @@
+Subject: stroke: mimic vici load-conn
+
+--- a/src/libcharon/plugins/stroke/stroke_config.c
++++ b/src/libcharon/plugins/stroke/stroke_config.c
+@@ -1135,6 +1135,85 @@
+ 	return child_cfg;
+ }
+ 
++/**
++ * Replace children of a peer config by a new config
++ */
++static void replace_child(private_stroke_config_t *this,
++							 peer_cfg_t *peer_cfg, child_cfg_t *new_child_cfg)
++{
++	enumerator_t *children;
++	child_cfg_t *child_cfg;
++
++	this->mutex->lock(this->mutex);
++
++	children = peer_cfg->create_child_cfg_enumerator(peer_cfg);
++
++	while (children->enumerate(children, &child_cfg))
++	{
++		if (new_child_cfg != child_cfg
++			&& streq(child_cfg->get_name(child_cfg), new_child_cfg->get_name(new_child_cfg)))
++		{
++			peer_cfg->remove_child_cfg(peer_cfg, children);
++			child_cfg->destroy(child_cfg);
++			break;
++		}
++	}
++	children->destroy(children);
++
++	this->mutex->unlock(this->mutex);
++}
++
++/**
++ * Merge/replace a peer config with existing configs
++ */
++static void merge_config_stroke(private_stroke_config_t *this, peer_cfg_t *peer_cfg, child_cfg_t *child_cfg)
++{
++	enumerator_t *enumerator;
++	peer_cfg_t *current;
++	ike_cfg_t *ike_cfg;
++	bool merged = FALSE;
++
++	this->mutex->lock(this->mutex);
++
++	enumerator = this->list->create_enumerator(this->list);
++	while (enumerator->enumerate(enumerator, &current))
++	{
++		if (streq(peer_cfg->get_name(peer_cfg), current->get_name(current)))
++		{
++			ike_cfg = current->get_ike_cfg(current);
++			if (peer_cfg->equals(peer_cfg, current) &&
++			        ike_cfg->equals(ike_cfg, peer_cfg->get_ike_cfg(peer_cfg)))
++			{
++				DBG1(DBG_CFG, "updated stroke connection: %s",
++					peer_cfg->get_name(peer_cfg));
++				replace_child(this, current, child_cfg);
++				peer_cfg->destroy(peer_cfg);
++			}
++			else
++			{
++				DBG1(DBG_CFG, "replaced stroke connection: %s",
++					peer_cfg->get_name(peer_cfg));
++				this->list->insert_before(this->list, enumerator, peer_cfg);
++				this->list->remove_at(this->list, enumerator);
++				current->destroy(current);
++			}
++			merged = TRUE;
++			break;
++		}
++	}
++	enumerator->destroy(enumerator);
++
++	if (!merged)
++	{
++		DBG1(DBG_CFG, "added stroke connection: %s", peer_cfg->get_name(peer_cfg));
++		this->list->insert_last(this->list, peer_cfg);
++	}
++	this->mutex->unlock(this->mutex);
++}
++
++/**
++ * VYATTA: Heavily patched stroke_config add method, to mimic the VICI load-conn method.
++ */
+ METHOD(stroke_config_t, add, void,
+ 	private_stroke_config_t *this, stroke_msg_t *msg)
+ {
+@@ -1182,18 +1261,7 @@
+ 	}
+ 	peer_cfg->add_child_cfg(peer_cfg, child_cfg);
+ 
+-	if (use_existing)
+-	{
+-		peer_cfg->destroy(peer_cfg);
+-	}
+-	else
+-	{
+-		/* add config to backend */
+-		DBG1(DBG_CFG, "added configuration '%s'", msg->add_conn.name);
+-		this->mutex->lock(this->mutex);
+-		this->list->insert_last(this->list, peer_cfg);
+-		this->mutex->unlock(this->mutex);
+-	}
++	merge_config_stroke(this, peer_cfg, child_cfg);
+ }
+ 
+ METHOD(stroke_config_t, del, void,
+--- a/src/starter/starter.c
++++ b/src/starter/starter.c
+@@ -697,6 +697,7 @@
+ 					{
+ 						for (conn2 = new_cfg->conn_first; conn2; conn2 = conn2->next)
+ 						{
++							/* skip unchanged configurations */
+ 							if (conn2->state == STATE_TO_ADD && starter_cmp_conn(conn, conn2))
+ 							{
+ 								conn->state = STATE_REPLACED;
+@@ -704,6 +705,13 @@
+ 								conn2->id = conn->id;
+ 								break;
+ 							}
++							/* override/update changed configurations */
++							else if (conn2->state == STATE_TO_ADD && streq(conn2->name, conn->name))
++							{
++								conn->state = STATE_REPLACED;
++								conn2->id = conn->id;
++								break;
++							}
+ 						}
+ 					}
+ 				}
