@@ -69,6 +69,15 @@ Authority (CA) to
 Whether relations in validated certificate chains should be cached in memory.
 
 .TP
+.BR charon.check_current_path " [no]"
+By default, after detecting any changes to interfaces and/or addresses no action
+is taken if the current path to the remote peer still looks usable. Enabling
+this option will use DPD to check if the path actually still works, or, for
+instance, the peer removed the state after a longer phase without connectivity.
+It will also trigger a MOBIKE update if NAT mappings were removed during the
+downtime.
+
+.TP
 .BR charon.cisco_unity " [no]"
 Send Cisco Unity vendor ID payload (IKEv1 only).
 
@@ -219,6 +228,11 @@ conflict with plugins that later need access to e.g. the used certificates.
 Whether to follow IKEv2 redirects (RFC 5685).
 
 .TP
+.BR charon.force_eap_only_authentication " [no]"
+Violate RFC 5998 and use EAP\-only authentication even if the peer did not send
+an EAP_ONLY_AUTHENTICATION notify during IKE_AUTH.
+
+.TP
 .BR charon.fragment_size " [1280]"
 Maximum size (complete IP datagram size in bytes) of a sent IKE fragment when
 using proprietary IKEv1 or standardized IKEv2 fragmentation, defaults to 1280
@@ -360,6 +374,12 @@ other interfaces are ignored.
 .TP
 .BR charon.keep_alive " [20s]"
 NAT keep alive interval.
+
+.TP
+.BR charon.keep_alive_dpd_margin " [0s]"
+Number of seconds the keep alive interval may be exceeded before a DPD is sent
+instead of a NAT keep alive (0 to disable).  This is only useful if a clock is
+used that includes time spent suspended (e.g. CLOCK_BOOTTIME).
 
 .TP
 .BR charon.leak_detective.detailed " [yes]"
