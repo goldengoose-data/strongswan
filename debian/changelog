@@ -1,9 +1,9 @@
-strongswan (5.9.0dr2-0danos1) UNRELEASED; urgency=medium
+strongswan (5.9.0dr2-0danos1) unstable; urgency=medium
 
   * DANOS release
   * New upstream version 5.9.0dr2
 
- -- Daniel Gollub <dgollub@att.com>  Wed, 17 Jun 2020 22:56:01 +0200
+ -- Daniel Gollub <dgollub@att.com>  Thu, 25 Jun 2020 15:44:06 +0200
 
 strongswan (5.8.4-1) unstable; urgency=medium
 
