@@ -98,32 +98,32 @@ host_triplet = @host@
 @USE_LIBTPMTSS_TRUE@am__append_9 = libtpmtss
 @USE_IMCV_TRUE@am__append_10 = libimcv
 @USE_LIBCHARON_TRUE@am__append_11 = libcharon
-@USE_FILE_CONFIG_TRUE@am__append_12 = starter
-@USE_IPSEC_SCRIPT_TRUE@am__append_13 = ipsec _copyright
-@USE_CHARON_TRUE@am__append_14 = charon
-@USE_SYSTEMD_TRUE@am__append_15 = charon-systemd
-@USE_NM_TRUE@am__append_16 = charon-nm
-@USE_STROKE_TRUE@am__append_17 = stroke
-@USE_UPDOWN_TRUE@am__append_18 = _updown
-@USE_SCEPCLIENT_TRUE@am__append_19 = scepclient
-@USE_PKI_TRUE@am__append_20 = pki
-@USE_SWANCTL_TRUE@am__append_21 = swanctl
-@USE_CONFTEST_TRUE@am__append_22 = conftest
-@USE_FAST_TRUE@am__append_23 = libfast
-@USE_MANAGER_TRUE@am__append_24 = manager
-@USE_MEDSRV_TRUE@am__append_25 = medsrv
-@USE_ATTR_SQL_TRUE@am__append_26 = pool
-@USE_ATTR_SQL_FALSE@@USE_SQL_TRUE@am__append_27 = pool
-@USE_TKM_TRUE@am__append_28 = charon-tkm
-@USE_CMD_TRUE@am__append_29 = charon-cmd
-@USE_SVC_TRUE@am__append_30 = charon-svc
-@USE_LIBPTTLS_TRUE@am__append_31 = pt-tls-client
-@USE_IMC_SWIMA_TRUE@am__append_32 = sw-collector
-@USE_IMV_SWIMA_TRUE@am__append_33 = sec-updater
-@USE_INTEGRITY_TEST_TRUE@am__append_34 = checksum
-@USE_AIKGEN_TRUE@am__append_35 = aikgen
-@USE_TPM_TRUE@am__append_36 = tpm_extendpcr
-@USE_KERNEL_NETLINK_TRUE@am__append_37 = xfrmi
+@USE_KERNEL_NETLINK_TRUE@@USE_LIBCHARON_TRUE@am__append_12 = xfrmi
+@USE_FILE_CONFIG_TRUE@am__append_13 = starter
+@USE_IPSEC_SCRIPT_TRUE@am__append_14 = ipsec _copyright
+@USE_CHARON_TRUE@am__append_15 = charon
+@USE_SYSTEMD_TRUE@am__append_16 = charon-systemd
+@USE_NM_TRUE@am__append_17 = charon-nm
+@USE_STROKE_TRUE@am__append_18 = stroke
+@USE_UPDOWN_TRUE@am__append_19 = _updown
+@USE_SCEPCLIENT_TRUE@am__append_20 = scepclient
+@USE_PKI_TRUE@am__append_21 = pki
+@USE_SWANCTL_TRUE@am__append_22 = swanctl
+@USE_CONFTEST_TRUE@am__append_23 = conftest
+@USE_FAST_TRUE@am__append_24 = libfast
+@USE_MANAGER_TRUE@am__append_25 = manager
+@USE_MEDSRV_TRUE@am__append_26 = medsrv
+@USE_ATTR_SQL_TRUE@am__append_27 = pool
+@USE_ATTR_SQL_FALSE@@USE_SQL_TRUE@am__append_28 = pool
+@USE_TKM_TRUE@am__append_29 = charon-tkm
+@USE_CMD_TRUE@am__append_30 = charon-cmd
+@USE_SVC_TRUE@am__append_31 = charon-svc
+@USE_LIBPTTLS_TRUE@am__append_32 = pt-tls-client
+@USE_IMC_SWIMA_TRUE@am__append_33 = sw-collector
+@USE_IMV_SWIMA_TRUE@am__append_34 = sec-updater
+@USE_INTEGRITY_TEST_TRUE@am__append_35 = checksum
+@USE_AIKGEN_TRUE@am__append_36 = aikgen
+@USE_TPM_TRUE@am__append_37 = tpm_extendpcr
 subdir = src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/config/libtool.m4 \
@@ -199,11 +199,11 @@ ETAGS = etags
 CTAGS = ctags
 DIST_SUBDIRS = . include libstrongswan libipsec libsimaka libtls \
 	libradius libtncif libtnccs libpttls libtpmtss libimcv \
-	libcharon starter ipsec _copyright charon charon-systemd \
+	libcharon xfrmi starter ipsec _copyright charon charon-systemd \
 	charon-nm stroke _updown scepclient pki swanctl conftest \
 	libfast manager medsrv pool charon-tkm charon-cmd charon-svc \
 	pt-tls-client sw-collector sec-updater checksum aikgen \
-	tpm_extendpcr xfrmi
+	tpm_extendpcr
 am__DIST_COMMON = $(srcdir)/Makefile.in
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
@@ -268,6 +268,7 @@ FUZZING_CFLAGS = @FUZZING_CFLAGS@
 FUZZING_LDFLAGS = @FUZZING_LDFLAGS@
 GEM = @GEM@
 GENHTML = @GENHTML@
+GIT_VERSION = @GIT_VERSION@
 GPERF = @GPERF@
 GPERF_LEN_TYPE = @GPERF_LEN_TYPE@
 GPRBUILD = @GPRBUILD@
