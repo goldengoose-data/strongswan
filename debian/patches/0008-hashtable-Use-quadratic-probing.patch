@@ -1,0 +1,75 @@
+From 93b2c2066fad82ce3249dcbe22e8a861438e75c0 Mon Sep 17 00:00:00 2001
+From: Tobias Brunner <tobias@strongswan.org>
+Date: Fri, 24 Apr 2020 19:11:25 +0200
+Subject: [PATCH 8/8] hashtable: Use quadratic probing
+
+This reduces the clustering problem (primary clustering) but is not
+completely free of it (secondary clustering) it still reduces the maximum
+and average probing lengths.
+---
+ src/libstrongswan/collections/hashtable.c | 18 ++++++++----------
+ 1 file changed, 8 insertions(+), 10 deletions(-)
+
+diff --git b/src/libstrongswan/collections/hashtable.c a/src/libstrongswan/collections/hashtable.c
+index fa1e4a093..8c290ac2d 100644
+--- b/src/libstrongswan/collections/hashtable.c
++++ a/src/libstrongswan/collections/hashtable.c
+@@ -272,13 +272,11 @@ static void init_hashtable(private_hashtable_t *this, u_int size)
+ }
+ 
+ /**
+- * Calculate the next bucket using quadratic probing (the sequence is h(k) + 1,
+- * h(k) + 3, h(k) + 6, h(k) + 10, ...).
++ * Calculate the next bucket using simple linear probing for now.
+  */
+-static inline u_int get_next(private_hashtable_t *this, u_int row, u_int *p)
++static inline u_int get_next(private_hashtable_t *this, u_int row)
+ {
+-	*p += 1;
+-	return (row + *p) & this->mask;
++	return (row + 1) & this->mask;
+ }
+ 
+ /**
+@@ -289,7 +287,7 @@ static inline pair_t *find_key(private_hashtable_t *this, const void *key,
+ 								u_int *out_hash, u_int *out_row)
+ {
+ 	pair_t *pair;
+-	u_int hash, row, p = 0, removed, index;
++	u_int hash, row, removed, index;
+ 	bool found_removed = FALSE;
+ 
+ 	if (!this->count && !out_hash && !out_row)
+@@ -320,7 +318,7 @@ static inline pair_t *find_key(private_hashtable_t *this, const void *key,
+ 			lookup_success(&this->profile);
+ 			return pair;
+ 		}
+-		row = get_next(this, row, &p);
++		row = get_next(this, row);
+ 		index = get_index(this, row);
+ 	}
+ 	if (out_hash)
+@@ -356,7 +354,7 @@ static inline u_int insert_item(private_hashtable_t *this, u_int row)
+ static bool rehash(private_hashtable_t *this, u_int size)
+ {
+ 	pair_t *old_items, *pair;
+-	u_int old_count, i, p, row, index;
++	u_int old_count, i, row, index;
+ 
+ 	if (size > MAX_SIZE)
+ 	{
+@@ -380,9 +378,9 @@ static bool rehash(private_hashtable_t *this, u_int size)
+ 			{
+ 				row = pair->hash & this->mask;
+ 				index = get_index(this, row);
+-				for (p = 0; index;)
++				while (index)
+ 				{
+-					row = get_next(this, row, &p);
++					row = get_next(this, row);
+ 					index = get_index(this, row);
+ 				}
+ 				index = insert_item(this, row);
+-- 
+2.20.1
+

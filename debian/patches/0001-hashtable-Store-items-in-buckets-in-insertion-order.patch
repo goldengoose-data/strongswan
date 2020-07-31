@@ -1,0 +1,389 @@
+From c66c850fc0e2c6b3c6ba5f13add8a9dda1b8efca Mon Sep 17 00:00:00 2001
+From: Tobias Brunner <tobias@strongswan.org>
+Date: Fri, 24 Apr 2020 08:30:03 +0200
+Subject: [PATCH 1/8] hashtable: Store items in buckets in insertion order
+
+This is more predictable when using get_match() in particular because
+the order does not change anymore when the table is rehashed.
+---
+ src/libstrongswan/collections/hashtable.c     | 177 ++++++++----------
+ .../tests/suites/test_hashtable.c             |  45 +----
+ 2 files changed, 84 insertions(+), 138 deletions(-)
+
+diff --git b/src/libstrongswan/collections/hashtable.c a/src/libstrongswan/collections/hashtable.c
+index 4607fad39..64f154c4e 100644
+--- b/src/libstrongswan/collections/hashtable.c
++++ a/src/libstrongswan/collections/hashtable.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (C) 2008-2020 Tobias Brunner
++ * Copyright (C) 2008-2014 Tobias Brunner
+  * HSR Hochschule fuer Technik Rapperswil
+  *
+  * This program is free software; you can redistribute it and/or modify it
+@@ -13,16 +13,13 @@
+  * for more details.
+  */
+ 
++
+ #include "hashtable.h"
+ 
+ #include <utils/chunk.h>
+ 
+-/** The minimum capacity of the hash table (MUST be a power of 2) */
+-#define MIN_CAPACITY 8
+ /** The maximum capacity of the hash table (MUST be a power of 2) */
+ #define MAX_CAPACITY (1 << 30)
+-/** Maximum load factor before the hash table is resized */
+-#define LOAD_FACTOR 0.75f
+ 
+ typedef struct pair_t pair_t;
+ 
+@@ -30,7 +27,6 @@ typedef struct pair_t pair_t;
+  * This pair holds a pointer to the key and value it represents.
+  */
+ struct pair_t {
+-
+ 	/**
+ 	 * Key of a hash table item.
+ 	 */
+@@ -75,7 +71,6 @@ typedef struct private_hashtable_t private_hashtable_t;
+  *
+  */
+ struct private_hashtable_t {
+-
+ 	/**
+ 	 * Public part of hash table.
+ 	 */
+@@ -96,6 +91,11 @@ struct private_hashtable_t {
+ 	 */
+ 	u_int mask;
+ 
++	/**
++	 * The load factor.
++	 */
++	float load_factor;
++
+ 	/**
+ 	 * The actual table.
+ 	 */
+@@ -205,9 +205,10 @@ static u_int get_nearest_powerof2(u_int n)
+  */
+ static void init_hashtable(private_hashtable_t *this, u_int capacity)
+ {
+-	capacity = max(MIN_CAPACITY, min(capacity, MAX_CAPACITY));
++	capacity = max(1, min(capacity, MAX_CAPACITY));
+ 	this->capacity = get_nearest_powerof2(capacity);
+ 	this->mask = this->capacity - 1;
++	this->load_factor = 0.75;
+ 
+ 	this->table = calloc(this->capacity, sizeof(pair_t*));
+ }
+@@ -217,8 +218,8 @@ static void init_hashtable(private_hashtable_t *this, u_int capacity)
+  */
+ static void rehash(private_hashtable_t *this)
+ {
+-	pair_t **old_table, *to_move, *pair, *next;
+-	u_int row, new_row, old_capacity;
++	pair_t **old_table;
++	u_int row, old_capacity;
+ 
+ 	if (this->capacity >= MAX_CAPACITY)
+ 	{
+@@ -232,119 +233,91 @@ static void rehash(private_hashtable_t *this)
+ 
+ 	for (row = 0; row < old_capacity; row++)
+ 	{
+-		to_move = old_table[row];
+-		while (to_move)
+-		{
+-			new_row = to_move->hash & this->mask;
+-			pair = this->table[new_row];
+-			if (pair)
+-			{
+-				while (pair->next)
+-				{
+-					pair = pair->next;
+-				}
+-				pair->next = to_move;
+-			}
+-			else
+-			{
+-				this->table[new_row] = to_move;
+-			}
+-			next = to_move->next;
+-			to_move->next = NULL;
+-			to_move = next;
++		pair_t *pair, *next;
++		u_int new_row;
++
++		pair = old_table[row];
++		while (pair)
++		{	/* insert pair at the front of new bucket*/
++			next = pair->next;
++			new_row = pair->hash & this->mask;
++			pair->next = this->table[new_row];
++			this->table[new_row] = pair;
++			pair = next;
+ 		}
+ 	}
+ 	free(old_table);
+ }
+ 
+-/**
+- * Find the pair with the given key, optionally returning the hash and previous
+- * (or last) pair in the bucket.
+- */
+-static inline pair_t *find_key(private_hashtable_t *this, const void *key,
+-							   hashtable_equals_t equals, u_int *out_hash,
+-							   pair_t **out_prev)
++METHOD(hashtable_t, put, void*,
++	private_hashtable_t *this, const void *key, void *value)
+ {
+-	pair_t *pair, *prev = NULL;
+-	u_int hash;
+-
+-	if (!this->count && !out_hash)
+-	{	/* no need to calculate the hash if not requested */
+-		return NULL;
+-	}
++	void *old_value = NULL;
++	pair_t *pair;
++	u_int hash, row;
+ 
+ 	hash = this->hash(key);
+-	if (out_hash)
+-	{
+-		*out_hash = hash;
+-	}
+-
+-	pair = this->table[hash & this->mask];
++	row = hash & this->mask;
++	pair = this->table[row];
+ 	while (pair)
+-	{
+-		if (hash == pair->hash && equals(key, pair->key))
++	{	/* search existing bucket for key */
++		if (this->equals(key, pair->key))
+ 		{
++			old_value = pair->value;
++			pair->value = value;
++			pair->key = key;
+ 			break;
+ 		}
+-		prev = pair;
+ 		pair = pair->next;
+ 	}
+-	if (out_prev)
++	if (!pair)
++	{	/* insert at the front of bucket */
++		pair = pair_create(key, value, hash);
++		pair->next = this->table[row];
++		this->table[row] = pair;
++		this->count++;
++	}
++	if (this->count >= this->capacity * this->load_factor)
+ 	{
+-		*out_prev = prev;
++		rehash(this);
+ 	}
+-	return pair;
++	return old_value;
+ }
+ 
+-METHOD(hashtable_t, put, void*,
+-	private_hashtable_t *this, const void *key, void *value)
++static void *get_internal(private_hashtable_t *this, const void *key,
++						  hashtable_equals_t equals)
+ {
+-	void *old_value = NULL;
+-	pair_t *pair, *prev = NULL;
+-	u_int hash;
++	void *value = NULL;
++	pair_t *pair;
+ 
+-	if (this->count >= this->capacity * LOAD_FACTOR)
+-	{
+-		rehash(this);
++	if (!this->count)
++	{	/* no need to calculate the hash */
++		return NULL;
+ 	}
+ 
+-	pair = find_key(this, key, this->equals, &hash, &prev);
+-	if (pair)
+-	{
+-		old_value = pair->value;
+-		pair->value = value;
+-		pair->key = key;
+-	}
+-	else
++	pair = this->table[this->hash(key) & this->mask];
++	while (pair)
+ 	{
+-		pair = pair_create(key, value, hash);
+-		if (prev)
++		if (equals(key, pair->key))
+ 		{
+-			prev->next = pair;
+-		}
+-		else
+-		{
+-			this->table[hash & this->mask] = pair;
+-
++			value = pair->value;
++			break;
+ 		}
+-		this->count++;
++		pair = pair->next;
+ 	}
+-	return old_value;
++	return value;
+ }
+ 
+-
+ METHOD(hashtable_t, get, void*,
+ 	private_hashtable_t *this, const void *key)
+ {
+-	pair_t *pair = find_key(this, key, this->equals, NULL, NULL);
+-	return pair ? pair->value : NULL;
++	return get_internal(this, key, this->equals);
+ }
+ 
+ METHOD(hashtable_t, get_match, void*,
+ 	private_hashtable_t *this, const void *key, hashtable_equals_t match)
+ {
+-	pair_t *pair = find_key(this, key, match, NULL, NULL);
+-	return pair ? pair->value : NULL;
++	return get_internal(this, key, match);
+ }
+ 
+ METHOD(hashtable_t, remove_, void*,
+@@ -352,21 +325,29 @@ METHOD(hashtable_t, remove_, void*,
+ {
+ 	void *value = NULL;
+ 	pair_t *pair, *prev = NULL;
++	u_int row;
+ 
+-	pair = find_key(this, key, this->equals, NULL, &prev);
+-	if (pair)
++	row = this->hash(key) & this->mask;
++	pair = this->table[row];
++	while (pair)
+ 	{
+-		if (prev)
++		if (this->equals(key, pair->key))
+ 		{
+-			prev->next = pair->next;
+-		}
+-		else
+-		{
+-			this->table[pair->hash & this->mask] = pair->next;
++			if (prev)
++			{
++				prev->next = pair->next;
++			}
++			else
++			{
++				this->table[row] = pair->next;
++			}
++			value = pair->value;
++			this->count--;
++			free(pair);
++			break;
+ 		}
+-		value = pair->value;
+-		free(pair);
+-		this->count--;
++		prev = pair;
++		pair = pair->next;
+ 	}
+ 	return value;
+ }
+diff --git b/src/libstrongswan/tests/suites/test_hashtable.c a/src/libstrongswan/tests/suites/test_hashtable.c
+index dfd38e6cf..5eadb2efe 100644
+--- b/src/libstrongswan/tests/suites/test_hashtable.c
++++ a/src/libstrongswan/tests/suites/test_hashtable.c
+@@ -1,5 +1,5 @@
+ /*
+- * Copyright (C) 2010-2020 Tobias Brunner
++ * Copyright (C) 2010-2013 Tobias Brunner
+  * HSR Hochschule fuer Technik Rapperswil
+  *
+  * This program is free software; you can redistribute it and/or modify it
+@@ -135,41 +135,6 @@ START_TEST(test_get_match)
+ }
+ END_TEST
+ 
+-START_TEST(test_get_match_remove)
+-{
+-	char *k1 = "key1_a", *k2 = "key2", *k3 = "key1_b", *k4 = "key1_c";
+-	char *v1 = "val1", *v2 = "val2", *v3 = "val3", *value;
+-
+-	ht = hashtable_create((hashtable_hash_t)hash_match,
+-						  (hashtable_equals_t)equals, 0);
+-
+-	ht->put(ht, k1, v1);
+-	ht->put(ht, k2, v2);
+-	ht->put(ht, k3, v3);
+-	ht->remove(ht, k1);
+-	ht->put(ht, k1, v1);
+-	ck_assert_int_eq(ht->get_count(ht), 3);
+-	ck_assert(streq(ht->get(ht, k1), v1));
+-	ck_assert(streq(ht->get(ht, k2), v2));
+-	ck_assert(streq(ht->get(ht, k3), v3));
+-
+-	value = ht->get_match(ht, k1, (hashtable_equals_t)equal_match);
+-	ck_assert(value != NULL);
+-	ck_assert(streq(value, v1));
+-	value = ht->get_match(ht, k2, (hashtable_equals_t)equal_match);
+-	ck_assert(value != NULL);
+-	ck_assert(streq(value, v2));
+-	value = ht->get_match(ht, k3, (hashtable_equals_t)equal_match);
+-	ck_assert(value != NULL);
+-	ck_assert(streq(value, v3));
+-	value = ht->get_match(ht, k4, (hashtable_equals_t)equal_match);
+-	ck_assert(value != NULL);
+-	ck_assert(streq(value, v3));
+-
+-	ht->destroy(ht);
+-}
+-END_TEST
+-
+ /*******************************************************************************
+  * remove
+  */
+@@ -214,8 +179,9 @@ START_TEST(test_remove_one_bucket)
+ 	char *k1 = "key1_a", *k2 = "key1_b", *k3 = "key1_c";
+ 
+ 	ht->destroy(ht);
++	/* set a capacity to avoid rehashing, which would change the items' order */
+ 	ht = hashtable_create((hashtable_hash_t)hash_match,
+-						  (hashtable_equals_t)equals, 0);
++						  (hashtable_equals_t)equals, 8);
+ 
+ 	do_remove(k1, k2, k3);
+ }
+@@ -336,9 +302,9 @@ START_TEST(test_remove_at_one_bucket)
+ 	char *k1 = "key1_a", *k2 = "key1_b", *k3 = "key1_c";
+ 
+ 	ht->destroy(ht);
++	/* set a capacity to avoid rehashing, which would change the items' order */
+ 	ht = hashtable_create((hashtable_hash_t)hash_match,
+-						  (hashtable_equals_t)equals, 0);
+-
++						  (hashtable_equals_t)equals, 8);
+ 	do_remove_at(k1, k2, k3);
+ }
+ END_TEST
+@@ -502,7 +468,6 @@ Suite *hashtable_suite_create()
+ 
+ 	tc = tcase_create("get_match");
+ 	tcase_add_test(tc, test_get_match);
+-	tcase_add_test(tc, test_get_match_remove);
+ 	suite_add_tcase(s, tc);
+ 
+ 	tc = tcase_create("remove");
+-- 
+2.20.1
+

@@ -1,0 +1,1853 @@
+From 45376040ce6346693a5acafd6449085f3896350c Mon Sep 17 00:00:00 2001
+From: Tobias Brunner <tobias@strongswan.org>
+Date: Fri, 24 Apr 2020 15:51:17 +0200
+Subject: [PATCH 6/8] hashtable: Maintain insertion order when enumerating
+
+With the previous approach we'd require at least an additional pointer
+per item to store them in a list (15-18% increase in the overhead per
+item).  Instead we switch from handling collisions with overflow lists to
+an open addressing scheme and store the actual table as variable-sized
+indices pointing into an array of all inserted items in their original
+order.
+
+This can reduce the memory overhead even compared to the previous
+implementation (especially for smaller tables), but because the array for
+items is preallocated whenever the table is resized, it can be worse for
+certain numbers of items.  However, avoiding all the allocations required
+by the previous design is actually a big advantage.
+
+Depending on the usage pattern, the performance can improve quite a bit (in
+particular when inserting many items).  The raw lookup performance is a bit
+slower as probing lengths increase with open addressing, but there are some
+caching benefits due to the compact storage.  So for general usage the
+performance should be better.  For instance, one test I did was counting the
+occurrences of words in a list of 1'000'000 randomly selected words from a
+dictionary of ~58'000 words (i.e. using a counter stored under each word as
+key).  The new implementation was ~8% faster on average while requiring
+10% less memory.
+
+Since we can't remove items from the array (would change the indices of all
+items that follow it) we just mark them as removed and remove them once the
+hash table is resized/rehashed (the cells in the hash table for these may
+be reused).  Due to this the latter may also happen if the number of stored
+items does not increase e.g. after a series of remove/put operations (each
+insertion requires storage in the array, no matter if items were removed).
+So if the capacity is exhausted, the table is resized/rehashed (after lots
+of removals the size may even be reduced) and all items marked as removed
+are simply skipped.
+
+Compared to the previous implementation the load factor/capacity is
+lowered to reduce chances of collisions and to avoid primary clustering to
+some degree.  However, the latter in particular, but the open addressing
+scheme in general, make this implementation completely unsuited for the
+get_match() functionality (purposefully hashing to the same value and,
+therefore, increasing the probing length and clustering).  And keeping the
+keys optionally sorted would complicate the code significantly.  So we just
+keep the existing hashlist_t implementation without adding code to maintain
+the overall insertion order (we could add that feature optionally later, but
+with the mentioned overhead for one or two pointers).
+
+The maximum size is currently not changed.  With the new implementation
+this translates to a hard limit for the maximum number of items that can be
+held in the table (=CAPACITY(MAX_SIZE)).  Since this equals 715'827'882
+items with the current settings, this shouldn't be a problem in practice,
+the table alone would require 20 GiB in memory for that many items.  The
+hashlist_t implementation doesn't have that limitation due to the overflow
+lists (it can store beyond it's capacity) but it itself would require over
+29 GiB of memory to hold that many items.
+---
+ src/libstrongswan/Android.mk                  |   2 +-
+ src/libstrongswan/Makefile.am                 |   3 +-
+ src/libstrongswan/collections/hashlist.c      | 548 --------------
+ src/libstrongswan/collections/hashtable.c     | 687 +++++++++++-------
+ src/libstrongswan/collections/hashtable.h     |  12 +-
+ .../collections/hashtable_profiler.h          | 119 ---
+ .../tests/suites/test_hashtable.c             |  60 --
+ 7 files changed, 447 insertions(+), 984 deletions(-)
+ delete mode 100644 src/libstrongswan/collections/hashlist.c
+ delete mode 100644 src/libstrongswan/collections/hashtable_profiler.h
+
+diff --git b/src/libstrongswan/Android.mk a/src/libstrongswan/Android.mk
+index 6d87447ea..97a9f6870 100644
+--- b/src/libstrongswan/Android.mk
++++ a/src/libstrongswan/Android.mk
+@@ -6,7 +6,7 @@ libstrongswan_la_SOURCES = \
+ library.c \
+ asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
+ collections/blocking_queue.c collections/enumerator.c collections/hashtable.c \
+-collections/hashlist.c collections/array.c \
++collections/array.c \
+ collections/linked_list.c crypto/crypters/crypter.c \
+ crypto/drbgs/drbg.c crypto/hashers/hasher.c \
+ crypto/hashers/hash_algorithm_set.c crypto/proposal/proposal.c \
+diff --git b/src/libstrongswan/Makefile.am a/src/libstrongswan/Makefile.am
+index 0754d7bc5..fda7463ed 100644
+--- b/src/libstrongswan/Makefile.am
++++ a/src/libstrongswan/Makefile.am
+@@ -4,7 +4,7 @@ libstrongswan_la_SOURCES = \
+ library.c \
+ asn1/asn1.c asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
+ collections/blocking_queue.c collections/enumerator.c collections/hashtable.c \
+-collections/hashlist.c collections/array.c \
++collections/array.c \
+ collections/linked_list.c crypto/crypters/crypter.c \
+ crypto/drbgs/drbg.c crypto/hashers/hasher.c \
+ crypto/hashers/hash_algorithm_set.c crypto/proposal/proposal.c \
+@@ -69,7 +69,6 @@ nobase_strongswan_include_HEADERS = \
+ library.h \
+ asn1/asn1.h asn1/asn1_parser.h asn1/oid.h bio/bio_reader.h bio/bio_writer.h \
+ collections/blocking_queue.h collections/enumerator.h collections/hashtable.h \
+-collections/hashtable_profiler.h \
+ collections/linked_list.h collections/array.h collections/dictionary.h \
+ crypto/crypters/crypter.h crypto/drbgs/drbg.h crypto/hashers/hasher.h \
+ crypto/hashers/hash_algorithm_set.h crypto/mac.h crypto/proposal/proposal.h \
+diff --git b/src/libstrongswan/collections/hashlist.c a/src/libstrongswan/collections/hashlist.c
+deleted file mode 100644
+index 13ef2a254..000000000
+--- b/src/libstrongswan/collections/hashlist.c
++++ /dev/null
+@@ -1,548 +0,0 @@
+-/*
+- * Copyright (C) 2008-2020 Tobias Brunner
+- * HSR Hochschule fuer Technik Rapperswil
+- *
+- * This program is free software; you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the
+- * Free Software Foundation; either version 2 of the License, or (at your
+- * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+- *
+- * This program is distributed in the hope that it will be useful, but
+- * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+- * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+- * for more details.
+- */
+-
+-#include "hashtable.h"
+-#include "hashtable_profiler.h"
+-
+-#include <utils/chunk.h>
+-#include <utils/debug.h>
+-#ifdef HASHTABLE_PROFILER
+-#include <utils/backtrace.h>
+-#endif
+-
+-/** The minimum size of the hash table (MUST be a power of 2) */
+-#define MIN_SIZE 8
+-/** The maximum size of the hash table (MUST be a power of 2) */
+-#define MAX_SIZE (1 << 30)
+-
+-/** Maximum load factor before the hash table is resized */
+-#define LOAD_FACTOR 0.75f
+-
+-/** Provided by hashtable_t */
+-u_int hashtable_get_nearest_powerof2(u_int n);
+-
+-typedef struct pair_t pair_t;
+-
+-/**
+- * This pair holds a pointer to the key and value it represents.
+- */
+-struct pair_t {
+-
+-	/**
+-	 * Key of a hash table item.
+-	 */
+-	const void *key;
+-
+-	/**
+-	 * Value of a hash table item.
+-	 */
+-	void *value;
+-
+-	/**
+-	 * Cached hash (used in case of a resize).
+-	 */
+-	u_int hash;
+-
+-	/**
+-	 * Next pair in an overflow list.
+-	 */
+-	pair_t *next;
+-};
+-
+-typedef struct private_hashlist_t private_hashlist_t;
+-
+-/**
+- * Private data of a hashlist_t object.
+- */
+-struct private_hashlist_t {
+-
+-	/**
+-	 * Public interface.
+-	 */
+-	hashlist_t public;
+-
+-	/**
+-	 * The number of items in the hash table.
+-	 */
+-	u_int count;
+-
+-	/**
+-	 * The current size of the hash table (always a power of 2).
+-	 */
+-	u_int size;
+-
+-	/**
+-	 * The current mask to calculate the row index (size - 1).
+-	 */
+-	u_int mask;
+-
+-	/**
+-	 * The actual table.
+-	 */
+-	pair_t **table;
+-
+-	/**
+-	 * The hashing function.
+-	 */
+-	hashtable_hash_t hash;
+-
+-	/**
+-	 * The equality function.
+-	 */
+-	hashtable_equals_t equals;
+-
+-	/**
+-	 * Alternative comparison function.
+-	 */
+-	hashtable_cmp_t cmp;
+-
+-	/**
+-	 * Profiling information
+-	 */
+-	hashtable_profile_t profile;
+-};
+-
+-typedef struct private_enumerator_t private_enumerator_t;
+-
+-/**
+- * Hash table enumerator implementation
+- */
+-struct private_enumerator_t {
+-
+-	/**
+-	 * Implements enumerator interface.
+-	 */
+-	enumerator_t enumerator;
+-
+-	/**
+-	 * Associated hash table.
+-	 */
+-	private_hashlist_t *table;
+-
+-	/**
+-	 * Current row index.
+-	 */
+-	u_int row;
+-
+-	/**
+-	 * Number of remaining items to enumerate.
+-	 */
+-	u_int count;
+-
+-	/**
+-	 * Current pair.
+-	 */
+-	pair_t *current;
+-
+-	/**
+-	 * Previous pair (used by remove_at).
+-	 */
+-	pair_t *prev;
+-};
+-
+-/**
+- * Init hash table parameters
+- */
+-static void init_hashtable(private_hashlist_t *this, u_int size)
+-{
+-	size = max(MIN_SIZE, min(size, MAX_SIZE));
+-	this->size = hashtable_get_nearest_powerof2(size);
+-	this->mask = this->size - 1;
+-	profile_size(&this->profile, this->size);
+-
+-	this->table = calloc(this->size, sizeof(pair_t*));
+-}
+-
+-/**
+- * Insert an item into a bucket.
+- */
+-static inline void insert_pair(private_hashlist_t *this, pair_t *to_insert,
+-							   pair_t *prev)
+-{
+-	u_int row;
+-
+-	if (prev)
+-	{
+-		to_insert->next = prev->next;
+-		prev->next = to_insert;
+-	}
+-	else
+-	{
+-		row = to_insert->hash & this->mask;
+-		to_insert->next = this->table[row];
+-		this->table[row] = to_insert;
+-	}
+-}
+-
+-/**
+- * Double the size of the hash table and rehash all the elements.
+- */
+-static void rehash(private_hashlist_t *this)
+-{
+-	pair_t **old_table, *to_move, *pair, *next;
+-	u_int row, old_size;
+-
+-	if (this->size >= MAX_SIZE)
+-	{
+-		return;
+-	}
+-
+-	old_size = this->size;
+-	old_table = this->table;
+-
+-	init_hashtable(this, old_size << 1);
+-
+-	for (row = 0; row < old_size; row++)
+-	{
+-		to_move = old_table[row];
+-		while (to_move)
+-		{
+-			pair_t *prev = NULL;
+-
+-			pair = this->table[to_move->hash & this->mask];
+-			while (pair)
+-			{
+-				if (this->cmp && this->cmp(to_move->key, pair->key) < 0)
+-				{
+-					break;
+-				}
+-				prev = pair;
+-				pair = pair->next;
+-			}
+-			next = to_move->next;
+-			insert_pair(this, to_move, prev);
+-			to_move = next;
+-		}
+-	}
+-	free(old_table);
+-}
+-
+-/**
+- * Find the pair with the given key, optionally returning the hash and previous
+- * (or last) pair in the bucket.
+- */
+-static inline pair_t *find_key(private_hashlist_t *this, const void *key,
+-							   hashtable_equals_t equals, u_int *out_hash,
+-							   pair_t **out_prev)
+-{
+-	pair_t *pair, *prev = NULL;
+-	bool use_callback = equals != NULL;
+-	u_int hash;
+-
+-	if (!this->count && !out_hash)
+-	{	/* no need to calculate the hash if not requested */
+-		return NULL;
+-	}
+-
+-	equals = equals ?: this->equals;
+-	hash = this->hash(key);
+-	if (out_hash)
+-	{
+-		*out_hash = hash;
+-	}
+-
+-	lookup_start();
+-
+-	pair = this->table[hash & this->mask];
+-	while (pair)
+-	{
+-		lookup_probing();
+-		/* when keys are sorted, we compare all items so we can abort earlier
+-		 * even if the hash does not match, but only as long as we don't
+-		 * have a callback */
+-		if (!use_callback && this->cmp)
+-		{
+-			int cmp = this->cmp(key, pair->key);
+-			if (cmp == 0)
+-			{
+-				break;
+-			}
+-			else if (cmp < 0)
+-			{	/* no need to continue as the key we search is smaller */
+-				pair = NULL;
+-				break;
+-			}
+-		}
+-		else if (hash == pair->hash && equals(key, pair->key))
+-		{
+-			break;
+-		}
+-		prev = pair;
+-		pair = pair->next;
+-	}
+-	if (out_prev)
+-	{
+-		*out_prev = prev;
+-	}
+-	if (pair)
+-	{
+-		lookup_success(&this->profile);
+-	}
+-	else
+-	{
+-		lookup_failure(&this->profile);
+-	}
+-	return pair;
+-}
+-
+-METHOD(hashtable_t, put, void*,
+-	private_hashlist_t *this, const void *key, void *value)
+-{
+-	void *old_value = NULL;
+-	pair_t *pair, *prev = NULL;
+-	u_int hash;
+-
+-	if (this->count >= this->size * LOAD_FACTOR)
+-	{
+-		rehash(this);
+-	}
+-
+-	pair = find_key(this, key, NULL, &hash, &prev);
+-	if (pair)
+-	{
+-		old_value = pair->value;
+-		pair->value = value;
+-		pair->key = key;
+-	}
+-	else
+-	{
+-		INIT(pair,
+-			.key = key,
+-			.value = value,
+-			.hash = hash,
+-		);
+-		insert_pair(this, pair, prev);
+-		this->count++;
+-		profile_count(&this->profile, this->count);
+-	}
+-	return old_value;
+-}
+-
+-
+-METHOD(hashtable_t, get, void*,
+-	private_hashlist_t *this, const void *key)
+-{
+-	pair_t *pair = find_key(this, key, NULL, NULL, NULL);
+-	return pair ? pair->value : NULL;
+-}
+-
+-METHOD(hashlist_t, get_match, void*,
+-	private_hashlist_t *this, const void *key, hashtable_equals_t match)
+-{
+-	pair_t *pair = find_key(this, key, match, NULL, NULL);
+-	return pair ? pair->value : NULL;
+-}
+-
+-METHOD(hashtable_t, remove_, void*,
+-	private_hashlist_t *this, const void *key)
+-{
+-	void *value = NULL;
+-	pair_t *pair, *prev = NULL;
+-
+-	pair = find_key(this, key, NULL, NULL, &prev);
+-	if (pair)
+-	{
+-		if (prev)
+-		{
+-			prev->next = pair->next;
+-		}
+-		else
+-		{
+-			this->table[pair->hash & this->mask] = pair->next;
+-		}
+-		value = pair->value;
+-		free(pair);
+-		this->count--;
+-	}
+-	return value;
+-}
+-
+-METHOD(hashtable_t, remove_at, void,
+-	private_hashlist_t *this, private_enumerator_t *enumerator)
+-{
+-	if (enumerator->table == this && enumerator->current)
+-	{
+-		pair_t *current = enumerator->current;
+-		if (enumerator->prev)
+-		{
+-			enumerator->prev->next = current->next;
+-		}
+-		else
+-		{
+-			this->table[enumerator->row] = current->next;
+-		}
+-		enumerator->current = enumerator->prev;
+-		free(current);
+-		this->count--;
+-	}
+-}
+-
+-METHOD(hashtable_t, get_count, u_int,
+-	private_hashlist_t *this)
+-{
+-	return this->count;
+-}
+-
+-METHOD(enumerator_t, enumerate, bool,
+-	private_enumerator_t *this, va_list args)
+-{
+-	const void **key;
+-	void **value;
+-
+-	VA_ARGS_VGET(args, key, value);
+-
+-	while (this->count && this->row < this->table->size)
+-	{
+-		this->prev = this->current;
+-		if (this->current)
+-		{
+-			this->current = this->current->next;
+-		}
+-		else
+-		{
+-			this->current = this->table->table[this->row];
+-		}
+-		if (this->current)
+-		{
+-			if (key)
+-			{
+-				*key = this->current->key;
+-			}
+-			if (value)
+-			{
+-				*value = this->current->value;
+-			}
+-			this->count--;
+-			return TRUE;
+-		}
+-		this->row++;
+-	}
+-	return FALSE;
+-}
+-
+-METHOD(hashtable_t, create_enumerator, enumerator_t*,
+-	private_hashlist_t *this)
+-{
+-	private_enumerator_t *enumerator;
+-
+-	INIT(enumerator,
+-		.enumerator = {
+-			.enumerate = enumerator_enumerate_default,
+-			.venumerate = _enumerate,
+-			.destroy = (void*)free,
+-		},
+-		.table = this,
+-		.count = this->count,
+-	);
+-
+-	return &enumerator->enumerator;
+-}
+-
+-static void destroy_internal(private_hashlist_t *this,
+-							 void (*fn)(void*,const void*))
+-{
+-	pair_t *pair, *next;
+-	u_int row;
+-
+-	profiler_cleanup(&this->profile, this->count, this->size);
+-
+-	for (row = 0; row < this->size; row++)
+-	{
+-		pair = this->table[row];
+-		while (pair)
+-		{
+-			if (fn)
+-			{
+-				fn(pair->value, pair->key);
+-			}
+-			next = pair->next;
+-			free(pair);
+-			pair = next;
+-		}
+-	}
+-	free(this->table);
+-	free(this);
+-}
+-
+-METHOD2(hashlist_t, hashtable_t, destroy, void,
+-	private_hashlist_t *this)
+-{
+-	destroy_internal(this, NULL);
+-}
+-
+-METHOD(hashtable_t, destroy_function, void,
+-	private_hashlist_t *this, void (*fn)(void*,const void*))
+-{
+-	destroy_internal(this, fn);
+-}
+-
+-/**
+- * Create a hash list
+- */
+-static private_hashlist_t *hashlist_create_internal(hashtable_hash_t hash,
+-													u_int size)
+-{
+-	private_hashlist_t *this;
+-
+-	INIT(this,
+-		.public = {
+-			.ht = {
+-				.put = _put,
+-				.get = _get,
+-				.remove = _remove_,
+-				.remove_at = (void*)_remove_at,
+-				.get_count = _get_count,
+-				.create_enumerator = _create_enumerator,
+-				.destroy = _destroy,
+-				.destroy_function = _destroy_function,
+-			},
+-			.get_match = _get_match,
+-			.destroy = _destroy,
+-		},
+-		.hash = hash,
+-	);
+-
+-	init_hashtable(this, size);
+-
+-	profiler_init(&this->profile, 3);
+-
+-	return this;
+-}
+-
+-/*
+- * Described in header
+- */
+-hashlist_t *hashlist_create(hashtable_hash_t hash, hashtable_equals_t equals,
+-							u_int size)
+-{
+-	private_hashlist_t *this = hashlist_create_internal(hash, size);
+-
+-	this->equals = equals;
+-
+-	return &this->public;
+-}
+-
+-/*
+- * Described in header
+- */
+-hashlist_t *hashlist_create_sorted(hashtable_hash_t hash,
+-								   hashtable_cmp_t cmp, u_int size)
+-{
+-	private_hashlist_t *this = hashlist_create_internal(hash, size);
+-
+-	this->cmp = cmp;
+-
+-	return &this->public;
+-}
+diff --git b/src/libstrongswan/collections/hashtable.c a/src/libstrongswan/collections/hashtable.c
+index 8c290ac2d..e569e581e 100644
+--- b/src/libstrongswan/collections/hashtable.c
++++ a/src/libstrongswan/collections/hashtable.c
+@@ -14,34 +14,19 @@
+  */
+ 
+ #include "hashtable.h"
+-#include "hashtable_profiler.h"
+ 
+ #include <utils/chunk.h>
+ #include <utils/debug.h>
++#ifdef HASHTABLE_PROFILER
++#include <utils/backtrace.h>
++#endif
+ 
+ /** The minimum size of the hash table (MUST be a power of 2) */
+ #define MIN_SIZE 8
+ /** The maximum size of the hash table (MUST be a power of 2) */
+ #define MAX_SIZE (1 << 30)
+-
+-/** Determine the capacity/maximum load of the table (higher values cause
+- * more collisions, lower values increase the memory overhead) */
+-#define CAPACITY(size) (size / 3 * 2)
+-/** Factor for the new table size based on the number of items when resizing,
+- * with the above load factor this results in doubling the size when growing */
+-#define RESIZE_FACTOR 3
+-
+-/**
+- * A note about these parameters:
+- *
+- * The maximum number of items that can be stored in this implementation
+- * is MAX_COUNT = CAPACITY(MAX_SIZE).
+- * Since we use u_int throughout, MAX_COUNT * RESIZE_FACTOR must not overflow
+- * this type.
+- */
+-#if (UINT_MAX / RESIZE_FACTOR < CAPACITY(MAX_SIZE))
+-	#error Hahstable parameters invalid!
+-#endif
++/** Maximum load factor before the hash table is resized */
++#define LOAD_FACTOR 0.75f
+ 
+ typedef struct pair_t pair_t;
+ 
+@@ -64,13 +49,33 @@ struct pair_t {
+ 	 * Cached hash (used in case of a resize).
+ 	 */
+ 	u_int hash;
++
++	/**
++	 * Next pair in an overflow list.
++	 */
++	pair_t *next;
+ };
+ 
++/**
++ * Creates an empty pair object.
++ */
++static inline pair_t *pair_create(const void *key, void *value, u_int hash)
++{
++	pair_t *this;
++
++	INIT(this,
++		.key = key,
++		.value = value,
++		.hash = hash,
++	);
++
++	return this;
++}
++
+ typedef struct private_hashtable_t private_hashtable_t;
+ 
+ /**
+  * Private data of a hashtable_t object.
+- *
+  */
+ struct private_hashtable_t {
+ 
+@@ -95,69 +100,141 @@ struct private_hashtable_t {
+ 	u_int mask;
+ 
+ 	/**
+-	 * All items in the order they were inserted (removed items are marked by
+-	 * setting the key to NULL until resized).
++	 * The actual table.
+ 	 */
+-	pair_t *items;
++	pair_t **table;
+ 
+ 	/**
+-	 * Number of available slots in the array above and the table in general,
+-	 * is set to CAPACITY(size) when the hash table is initialized.
++	 * The hashing function.
+ 	 */
+-	u_int capacity;
++	hashtable_hash_t hash;
+ 
+ 	/**
+-	 * Number of used slots in the array above.
++	 * The equality function.
+ 	 */
+-	u_int items_count;
++	hashtable_equals_t equals;
+ 
+ 	/**
+-	 * Hash table with indices into the array above.  The type depends on the
+-	 * current capacity.
++	 * Alternative comparison function.
+ 	 */
+-	void *table;
++	hashtable_cmp_t cmp;
+ 
++#ifdef HASHTABLE_PROFILER
+ 	/**
+-	 * The hashing function.
++	 * Some stats to profile lookups in the table
+ 	 */
+-	hashtable_hash_t hash;
++	struct {
++		size_t count;
++		size_t probes;
++		size_t longest;
++	} success, failure;
+ 
+ 	/**
+-	 * The equality function.
++	 * Stats on the memory usage of the table
+ 	 */
+-	hashtable_equals_t equals;
++	struct {
++		size_t count;
++		size_t size;
++	} max;
++
++	/**
++	 * Keep track of where the hash table was created
++	 */
++	backtrace_t *backtrace;
++#endif
++};
++
++typedef struct private_hashlist_t private_hashlist_t;
++
++/**
++ * Private data of a hashlist_t object.
++ */
++struct private_hashlist_t {
+ 
+ 	/**
+-	 * Profiling data
++	 * Public part of hash table.
+ 	 */
+-	hashtable_profile_t profile;
++	hashlist_t public;
++
++	/**
++	 * Inherited private part of hash table (we get the public part too, but
++	 * ignore it).
++	 */
++	private_hashtable_t super;
+ };
+ 
++#ifdef HASHTABLE_PROFILER
++
++#define lookup_start() \
++	u_int _lookup_probes = 0;
++
++#define lookup_probing() \
++	_lookup_probes++;
++
++#define _lookup_done(table, result) \
++	table->result.count++; \
++	table->result.probes += _lookup_probes; \
++	table->result.longest = max(table->result.longest, _lookup_probes);
++
++#define lookup_success(table) _lookup_done(table, success);
++#define lookup_failure(table) _lookup_done(table, failure);
++
++#define profile_size(table) \
++	table->max.size = max(table->max.size, table->size);
++#define profile_count(table) \
++	table->max.count = max(table->max.count, table->count);
++
++#else
++
++#define lookup_start(...) {}
++#define lookup_probing(...) {}
++#define lookup_success(...) {}
++#define lookup_failure(...) {}
++#define profile_size(...) {}
++#define profile_count(...) {}
++
++#endif
++
+ typedef struct private_enumerator_t private_enumerator_t;
+ 
+ /**
+- * Hash table enumerator implementation
++ * hash table enumerator implementation
+  */
+ struct private_enumerator_t {
+ 
+ 	/**
+-	 * Implements enumerator interface
++	 * implements enumerator interface
+ 	 */
+ 	enumerator_t enumerator;
+ 
+ 	/**
+-	 * Associated hash table
++	 * associated hash table
+ 	 */
+ 	private_hashtable_t *table;
+ 
+ 	/**
+-	 * Current index
++	 * current row index
++	 */
++	u_int row;
++
++	/**
++	 * number of remaining items in hashtable
++	 */
++	u_int count;
++
++	/**
++	 * current pair
++	 */
++	pair_t *current;
++
++	/**
++	 * previous pair (used by remove_at)
+ 	 */
+-	u_int index;
++	pair_t *prev;
+ };
+ 
+ /*
+- * Described in header
++ * See header.
+  */
+ u_int hashtable_hash_ptr(const void *key)
+ {
+@@ -165,7 +242,7 @@ u_int hashtable_hash_ptr(const void *key)
+ }
+ 
+ /*
+- * Described in header
++ * See header.
+  */
+ u_int hashtable_hash_str(const void *key)
+ {
+@@ -173,7 +250,7 @@ u_int hashtable_hash_str(const void *key)
+ }
+ 
+ /*
+- * Described in header
++ * See header.
+  */
+ bool hashtable_equals_ptr(const void *key, const void *other_key)
+ {
+@@ -181,58 +258,20 @@ bool hashtable_equals_ptr(const void *key, const void *other_key)
+ }
+ 
+ /*
+- * Described in header
++ * See header.
+  */
+ bool hashtable_equals_str(const void *key, const void *other_key)
+ {
+ 	return streq(key, other_key);
+ }
+ 
+-/**
+- * Returns the index stored in the given bucket. If the bucket is empty,
+- * 0 is returned.
+- */
+-static inline u_int get_index(private_hashtable_t *this, u_int row)
+-{
+-	if (this->capacity <= 0xff)
+-	{
+-		return ((uint8_t*)this->table)[row];
+-	}
+-	else if (this->capacity <= 0xffff)
+-	{
+-		return ((uint16_t*)this->table)[row];
+-	}
+-	return ((u_int*)this->table)[row];
+-}
+-
+-/**
+- * Set the index stored in the given bucket. Set to 0 to clear a bucket.
+- */
+-static inline void set_index(private_hashtable_t *this, u_int row, u_int index)
+-{
+-	if (this->capacity <= 0xff)
+-	{
+-		((uint8_t*)this->table)[row] = index;
+-	}
+-	else if (this->capacity <= 0xffff)
+-	{
+-		((uint16_t*)this->table)[row] = index;
+-	}
+-	else
+-	{
+-		((u_int*)this->table)[row] = index;
+-	}
+-}
+-
+ /**
+  * This function returns the next-highest power of two for the given number.
+  * The algorithm works by setting all bits on the right-hand side of the most
+  * significant 1 to 1 and then increments the whole number so it rolls over
+  * to the nearest power of two. Note: returns 0 for n == 0
+- *
+- * Also used by hashlist_t.
+  */
+-u_int hashtable_get_nearest_powerof2(u_int n)
++static u_int get_nearest_powerof2(u_int n)
+ {
+ 	u_int i;
+ 
+@@ -245,224 +284,227 @@ u_int hashtable_get_nearest_powerof2(u_int n)
+ }
+ 
+ /**
+- * Init hash table to the given size
++ * Init hash table parameters
+  */
+ static void init_hashtable(private_hashtable_t *this, u_int size)
+ {
+-	u_int index_size = sizeof(u_int);
+-
+-	this->size = max(MIN_SIZE, min(size, MAX_SIZE));
+-	this->size = hashtable_get_nearest_powerof2(this->size);
++	size = max(MIN_SIZE, min(size, MAX_SIZE));
++	this->size = get_nearest_powerof2(size);
+ 	this->mask = this->size - 1;
+-	profile_size(&this->profile, this->size);
++	profile_size(this);
+ 
+-	this->capacity = CAPACITY(this->size);
+-	this->items = calloc(this->capacity, sizeof(pair_t));
+-	this->items_count = 0;
+-
+-	if (this->capacity <= 0xff)
+-	{
+-		index_size = sizeof(uint8_t);
+-	}
+-	else if (this->capacity <= 0xffff)
+-	{
+-		index_size = sizeof(uint16_t);
+-	}
+-	this->table = calloc(this->size, index_size);
+-}
+-
+-/**
+- * Calculate the next bucket using simple linear probing for now.
+- */
+-static inline u_int get_next(private_hashtable_t *this, u_int row)
+-{
+-	return (row + 1) & this->mask;
++	this->table = calloc(this->size, sizeof(pair_t*));
+ }
+ 
+ /**
+- * Find the pair with the given key, optionally returns the hash and first empty
+- * or previously used row if the key is not found.
++ * Double the size of the hash table and rehash all the elements.
+  */
+-static inline pair_t *find_key(private_hashtable_t *this, const void *key,
+-								u_int *out_hash, u_int *out_row)
++static void rehash(private_hashtable_t *this)
+ {
+-	pair_t *pair;
+-	u_int hash, row, removed, index;
+-	bool found_removed = FALSE;
++	pair_t **old_table, *to_move, *pair, *next;
++	u_int row, new_row, old_size;
+ 
+-	if (!this->count && !out_hash && !out_row)
++	if (this->size >= MAX_SIZE)
+ 	{
+-		return NULL;
++		return;
+ 	}
+ 
+-	lookup_start();
++	old_size = this->size;
++	old_table = this->table;
+ 
+-	hash = this->hash(key);
+-	row = hash & this->mask;
+-	index = get_index(this, row);
+-	while (index)
+-	{
+-		lookup_probing();
+-		pair = &this->items[index-1];
++	init_hashtable(this, old_size << 1);
+ 
+-		if (!pair->key)
++	for (row = 0; row < old_size; row++)
++	{
++		to_move = old_table[row];
++		while (to_move)
+ 		{
+-			if (!found_removed && out_row)
++			pair_t *prev = NULL;
++
++			new_row = to_move->hash & this->mask;
++			pair = this->table[new_row];
++			while (pair)
+ 			{
+-				removed = row;
+-				found_removed = TRUE;
++				if (this->cmp && this->cmp(to_move->key, pair->key) < 0)
++				{
++					break;
++				}
++				prev = pair;
++				pair = pair->next;
+ 			}
++			next = to_move->next;
++			to_move->next = NULL;
++			if (prev)
++			{
++				to_move->next = prev->next;
++				prev->next = to_move;
++			}
++			else
++			{
++				to_move->next = this->table[new_row];
++				this->table[new_row] = to_move;
++			}
++			to_move = next;
+ 		}
+-		else if (pair->hash == hash && this->equals(key, pair->key))
+-		{
+-			lookup_success(&this->profile);
+-			return pair;
+-		}
+-		row = get_next(this, row);
+-		index = get_index(this, row);
+-	}
+-	if (out_hash)
+-	{
+-		*out_hash = hash;
+-	}
+-	if (out_row)
+-	{
+-		*out_row = found_removed ? removed : row;
+ 	}
+-	lookup_failure(&this->profile);
+-	return NULL;
++	free(old_table);
+ }
+ 
+ /**
+- * Helper to insert a new item into the table and items array,
+- * returns its new index into the latter.
++ * Find the pair with the given key, optionally returning the hash and previous
++ * (or last) pair in the bucket.
+  */
+-static inline u_int insert_item(private_hashtable_t *this, u_int row)
++static inline pair_t *find_key(private_hashtable_t *this, const void *key,
++							   hashtable_equals_t equals, u_int *out_hash,
++							   pair_t **out_prev)
+ {
+-	u_int index = this->items_count++;
+-
+-	/* we use 0 to mark unused buckets, so increase the index */
+-	set_index(this, row, index + 1);
+-	return index;
+-}
++	pair_t *pair, *prev = NULL;
++	bool use_callback = equals != NULL;
++	u_int hash;
+ 
+-/**
+- * Resize the hash table to the given size and rehash all the elements,
+- * size may be smaller or even the same (e.g. if it's necessary to clear
+- * previously used buckets).
+- */
+-static bool rehash(private_hashtable_t *this, u_int size)
+-{
+-	pair_t *old_items, *pair;
+-	u_int old_count, i, row, index;
++	if (!this->count && !out_hash)
++	{	/* no need to calculate the hash if not requested */
++		return NULL;
++	}
+ 
+-	if (size > MAX_SIZE)
++	equals = equals ?: this->equals;
++	hash = this->hash(key);
++	if (out_hash)
+ 	{
+-		return FALSE;
++		*out_hash = hash;
+ 	}
+ 
+-	old_items = this->items;
+-	old_count = this->items_count;
+-	free(this->table);
+-	init_hashtable(this, size);
++	lookup_start();
+ 
+-	/* no need to do anything if the table is empty and we are just cleaning
+-	 * up previously used items */
+-	if (this->count)
++	pair = this->table[hash & this->mask];
++	while (pair)
+ 	{
+-		for (i = 0; i < old_count; i++)
++		lookup_probing();
++		/* when keys are sorted, we compare all items so we can abort earlier
++		 * even if the hash does not match, but only as long as we don't
++		 * have a callback */
++		if (!use_callback && this->cmp)
+ 		{
+-			pair = &old_items[i];
+-
+-			if (pair->key)
++			int cmp = this->cmp(key, pair->key);
++			if (cmp == 0)
+ 			{
+-				row = pair->hash & this->mask;
+-				index = get_index(this, row);
+-				while (index)
+-				{
+-					row = get_next(this, row);
+-					index = get_index(this, row);
+-				}
+-				index = insert_item(this, row);
+-				this->items[index] = *pair;
++				break;
++			}
++			else if (cmp < 0)
++			{	/* no need to continue as the key we search is smaller */
++				pair = NULL;
++				break;
+ 			}
+ 		}
++		else if (hash == pair->hash && equals(key, pair->key))
++		{
++			break;
++		}
++		prev = pair;
++		pair = pair->next;
+ 	}
+-	free(old_items);
+-	return TRUE;
++	if (out_prev)
++	{
++		*out_prev = prev;
++	}
++	if (pair)
++	{
++		lookup_success(this);
++	}
++	else
++	{
++		lookup_failure(this);
++	}
++	return pair;
+ }
+ 
+ METHOD(hashtable_t, put, void*,
+ 	private_hashtable_t *this, const void *key, void *value)
+ {
+ 	void *old_value = NULL;
+-	pair_t *pair;
+-	u_int index, hash = 0, row = 0;
++	pair_t *pair, *prev = NULL;
++	u_int hash;
+ 
+-	if (this->items_count >= this->capacity &&
+-		!rehash(this, this->count * RESIZE_FACTOR))
++	if (this->count >= this->size * LOAD_FACTOR)
+ 	{
+-		DBG1(DBG_LIB, "!!! FAILED TO RESIZE HASHTABLE TO %u !!!",
+-			 this->count * RESIZE_FACTOR);
+-		return NULL;
++		rehash(this);
+ 	}
+-	pair = find_key(this, key, &hash, &row);
++
++	pair = find_key(this, key, NULL, &hash, &prev);
+ 	if (pair)
+ 	{
+ 		old_value = pair->value;
+ 		pair->value = value;
+ 		pair->key = key;
+-		return old_value;
+ 	}
+-	index = insert_item(this, row);
+-	this->items[index] = (pair_t){
+-		.hash = hash,
+-		.key = key,
+-		.value = value,
+-	};
+-	this->count++;
+-	profile_count(&this->profile, this->count);
+-	return NULL;
++	else
++	{
++		pair = pair_create(key, value, hash);
++		if (prev)
++		{
++			pair->next = prev->next;
++			prev->next = pair;
++		}
++		else
++		{
++			pair->next = this->table[hash & this->mask];
++			this->table[hash & this->mask] = pair;
++		}
++		this->count++;
++		profile_count(this);
++	}
++	return old_value;
+ }
+ 
++
+ METHOD(hashtable_t, get, void*,
+ 	private_hashtable_t *this, const void *key)
+ {
+-	pair_t *pair = find_key(this, key, NULL, NULL);
++	pair_t *pair = find_key(this, key, NULL, NULL, NULL);
+ 	return pair ? pair->value : NULL;
+ }
+ 
+-/**
+- * Remove the given item from the table, returns the currently stored value.
+- */
+-static void *remove_internal(private_hashtable_t *this, pair_t *pair)
++METHOD(hashtable_t, remove_, void*,
++	private_hashtable_t *this, const void *key)
+ {
+ 	void *value = NULL;
++	pair_t *pair, *prev = NULL;
+ 
++	pair = find_key(this, key, NULL, NULL, &prev);
+ 	if (pair)
+-	{	/* this does not decrease the item count as we keep the previously
+-		 * used items until the table is rehashed/resized */
++	{
++		if (prev)
++		{
++			prev->next = pair->next;
++		}
++		else
++		{
++			this->table[pair->hash & this->mask] = pair->next;
++		}
+ 		value = pair->value;
+-		pair->key = NULL;
++		free(pair);
+ 		this->count--;
+ 	}
+ 	return value;
+ }
+ 
+-METHOD(hashtable_t, remove_, void*,
+-	private_hashtable_t *this, const void *key)
+-{
+-	pair_t *pair = find_key(this, key, NULL, NULL);
+-	return remove_internal(this, pair);
+-}
+-
+ METHOD(hashtable_t, remove_at, void,
+ 	private_hashtable_t *this, private_enumerator_t *enumerator)
+ {
+-	if (enumerator->table == this && enumerator->index)
+-	{	/* the index is already advanced by one */
+-		u_int index = enumerator->index - 1;
+-		remove_internal(this, &this->items[index]);
++	if (enumerator->table == this && enumerator->current)
++	{
++		pair_t *current = enumerator->current;
++		if (enumerator->prev)
++		{
++			enumerator->prev->next = current->next;
++		}
++		else
++		{
++			this->table[enumerator->row] = current->next;
++		}
++		enumerator->current = enumerator->prev;
++		free(current);
++		this->count--;
+ 	}
+ }
+ 
+@@ -477,25 +519,34 @@ METHOD(enumerator_t, enumerate, bool,
+ {
+ 	const void **key;
+ 	void **value;
+-	pair_t *pair;
+ 
+ 	VA_ARGS_VGET(args, key, value);
+ 
+-	while (this->index < this->table->items_count)
++	while (this->count && this->row < this->table->size)
+ 	{
+-		pair = &this->table->items[this->index++];
+-		if (pair->key)
++		this->prev = this->current;
++		if (this->current)
++		{
++			this->current = this->current->next;
++		}
++		else
++		{
++			this->current = this->table->table[this->row];
++		}
++		if (this->current)
+ 		{
+ 			if (key)
+ 			{
+-				*key = pair->key;
++				*key = this->current->key;
+ 			}
+ 			if (value)
+ 			{
+-				*value = pair->value;
++				*value = this->current->value;
+ 			}
++			this->count--;
+ 			return TRUE;
+ 		}
++		this->row++;
+ 	}
+ 	return FALSE;
+ }
+@@ -512,48 +563,125 @@ METHOD(hashtable_t, create_enumerator, enumerator_t*,
+ 			.destroy = (void*)free,
+ 		},
+ 		.table = this,
++		.count = this->count,
+ 	);
++
+ 	return &enumerator->enumerator;
+ }
+ 
+ static void destroy_internal(private_hashtable_t *this,
+ 							 void (*fn)(void*,const void*))
+ {
+-	pair_t *pair;
+-	u_int i;
++	pair_t *pair, *next;
++	u_int row;
+ 
+-	profiler_cleanup(&this->profile, this->count, this->size);
++#ifdef HASHTABLE_PROFILER
++	if (this->success.count || this->failure.count)
++	{
++		fprintf(stderr, "%zu elements [max. %zu], %zu buckets [%zu], %zu "
++				"successful / %zu failed lookups, %.4f [%zu] / %.4f "
++				"[%zu] avg. probes in table created at:",
++				this->count, this->max.count, this->size, this->max.size,
++				this->success.count, this->failure.count,
++				(double)this->success.probes/this->success.count,
++				this->success.longest,
++				(double)this->failure.probes/this->failure.count,
++				this->failure.longest);
++		this->backtrace->log(this->backtrace, stderr, TRUE);
++	}
++	this->backtrace->destroy(this->backtrace);
++#endif
+ 
+-	if (fn)
++	for (row = 0; row < this->size; row++)
+ 	{
+-		for (i = 0; i < this->items_count; i++)
++		pair = this->table[row];
++		while (pair)
+ 		{
+-			pair = &this->items[i];
+-			if (pair->key)
++			if (fn)
+ 			{
+ 				fn(pair->value, pair->key);
+ 			}
++			next = pair->next;
++			free(pair);
++			pair = next;
+ 		}
+ 	}
+-	free(this->items);
+ 	free(this->table);
+-	free(this);
+ }
+ 
+ METHOD(hashtable_t, destroy, void,
+ 	private_hashtable_t *this)
+ {
+ 	destroy_internal(this, NULL);
++	free(this);
+ }
+ 
+ METHOD(hashtable_t, destroy_function, void,
+ 	private_hashtable_t *this, void (*fn)(void*,const void*))
+ {
+ 	destroy_internal(this, fn);
++	free(this);
++}
++
++METHOD(hashtable_t, create_enumerator_hashlist, enumerator_t*,
++	private_hashlist_t *this)
++{
++	return create_enumerator(&this->super);
++}
++
++METHOD(hashtable_t, put_hashlist, void*,
++	private_hashlist_t *this, const void *key, void *value)
++{
++	return put(&this->super, key, value);
++}
++
++METHOD(hashtable_t, get_hashlist, void*,
++	private_hashlist_t *this, const void *key)
++{
++	return get(&this->super, key);
++}
++
++METHOD(hashlist_t, get_match, void*,
++	private_hashlist_t *this, const void *key, hashtable_equals_t match)
++{
++	pair_t *pair = find_key(&this->super, key, match, NULL, NULL);
++	return pair ? pair->value : NULL;
++}
++
++METHOD(hashtable_t, remove_hashlist, void*,
++	private_hashlist_t *this, const void *key)
++{
++	return remove_(&this->super, key);
++}
++
++METHOD(hashtable_t, remove_at_hashlist, void,
++	private_hashlist_t *this, private_enumerator_t *enumerator)
++{
++	remove_at(&this->super, enumerator);
++}
++
++METHOD(hashtable_t, get_count_hashlist, u_int,
++	private_hashlist_t *this)
++{
++	return get_count(&this->super);
++}
++
++METHOD2(hashtable_t, hashlist_t, destroy_hashlist, void,
++	private_hashlist_t *this)
++{
++	destroy_internal(&this->super, NULL);
++	free(this);
++}
++
++METHOD(hashtable_t, destroy_function_hashlist, void,
++	private_hashlist_t *this, void (*fn)(void*,const void*))
++{
++	destroy_internal(&this->super, fn);
++	free(this);
+ }
+ 
+ /*
+- * Described in header.
++ * Described in header
+  */
+ hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
+ 							  u_int size)
+@@ -577,7 +705,72 @@ hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
+ 
+ 	init_hashtable(this, size);
+ 
+-	profiler_init(&this->profile, 2);
++#ifdef HASHTABLE_PROFILER
++	this->backtrace = backtrace_create(3);
++#endif
++
++	return &this->public;
++}
++
++/**
++ * Create a hash table
++ */
++static private_hashlist_t *hashlist_create_internal(hashtable_hash_t hash,
++													u_int size)
++{
++	private_hashlist_t *this;
++
++	INIT(this,
++		.public = {
++			.ht = {
++				.put = _put_hashlist,
++				.get = _get_hashlist,
++				.remove = _remove_hashlist,
++				.remove_at = (void*)_remove_at_hashlist,
++				.get_count = _get_count_hashlist,
++				.create_enumerator = _create_enumerator_hashlist,
++				.destroy = _destroy_hashlist,
++				.destroy_function = _destroy_function_hashlist,
++			},
++			.get_match = _get_match,
++			.destroy = _destroy_hashlist,
++		},
++		.super = {
++			.hash = hash,
++		}
++	);
++
++	init_hashtable(&this->super, size);
++
++#ifdef HASHTABLE_PROFILER
++	this->super.backtrace = backtrace_create(3);
++#endif
++
++	return this;
++}
++
++/*
++ * Described in header
++ */
++hashlist_t *hashlist_create(hashtable_hash_t hash, hashtable_equals_t equals,
++							u_int size)
++{
++	private_hashlist_t *this = hashlist_create_internal(hash, size);
++
++	this->super.equals = equals;
++
++	return &this->public;
++}
++
++/*
++ * Described in header
++ */
++hashlist_t *hashlist_create_sorted(hashtable_hash_t hash,
++								   hashtable_cmp_t cmp, u_int size)
++{
++	private_hashlist_t *this = hashlist_create_internal(hash, size);
++
++	this->super.cmp = cmp;
+ 
+ 	return &this->public;
+ }
+diff --git b/src/libstrongswan/collections/hashtable.h a/src/libstrongswan/collections/hashtable.h
+index 2eef38260..de0284920 100644
+--- b/src/libstrongswan/collections/hashtable.h
++++ a/src/libstrongswan/collections/hashtable.h
+@@ -53,7 +53,7 @@ u_int hashtable_hash_str(const void *key);
+ /**
+  * Prototype for a function that compares the two keys for equality.
+  *
+- * @param key			first key (the one we are looking for/inserting)
++ * @param key			first key (the one we are looking for)
+  * @param other_key		second key
+  * @return				TRUE if the keys are equal
+  */
+@@ -92,7 +92,8 @@ typedef int (*hashtable_cmp_t)(const void *key, const void *other_key);
+  *
+  * General purpose hash table. This hash table is not synchronized.
+  *
+- * The insertion order is maintained when enumerating entries.
++ * @note Any ordering only pertains to keys/items in the same bucket (with or
++ * without the same hash value), not to the order when enumerating.
+  */
+ struct hashtable_t {
+ 
+@@ -168,9 +169,7 @@ struct hashtable_t {
+  * method.
+  *
+  * @note The ordering only pertains to keys/items in the same bucket (with or
+- * without the same hash value), not to the order when enumerating. So unlike
+- * hashtable_t this class does not guarantee any specific order when enumerating
+- * all entries.
++ * without the same hash value), not to the order when enumerating.
+  *
+  * This is intended to be used with hash functions that intentionally return the
+  * same hash value for different keys so multiple items can be retrieved for a
+@@ -195,8 +194,7 @@ struct hashlist_t {
+ 	 * than the equals/comparison function provided to the constructor.
+ 	 *
+ 	 * This basically allows to enumerate all entries with the same hash value
+-	 * in their key's order (insertion order, i.e. without comparison function)
+-	 * is only guaranteed for items with the same hash value.
++	 * in their key's order.
+ 	 *
+ 	 * @param key		the key to match against
+ 	 * @param match		match function to be used when comparing keys
+diff --git b/src/libstrongswan/collections/hashtable_profiler.h a/src/libstrongswan/collections/hashtable_profiler.h
+deleted file mode 100644
+index e65b89371..000000000
+--- b/src/libstrongswan/collections/hashtable_profiler.h
++++ /dev/null
+@@ -1,119 +0,0 @@
+-/*
+- * Copyright (C) 2020 Tobias Brunner
+- * HSR Hochschule fuer Technik Rapperswil
+- *
+- * This program is free software; you can redistribute it and/or modify it
+- * under the terms of the GNU General Public License as published by the
+- * Free Software Foundation; either version 2 of the License, or (at your
+- * option) any later version.  See <http://www.fsf.org/copyleft/gpl.txt>.
+- *
+- * This program is distributed in the hope that it will be useful, but
+- * WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+- * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+- * for more details.
+- */
+-
+-#ifndef HASHTABLE_PROFILER_H_
+-#define HASHTABLE_PROFILER_H_
+-
+-#ifdef HASHTABLE_PROFILER
+-
+-#include <time.h>
+-#include <utils/backtrace.h>
+-
+-typedef struct hashtable_profile_t hashtable_profile_t;
+-
+-struct hashtable_profile_t {
+-
+-	/**
+-	 * Some stats to profile lookups in the table
+-	 */
+-	struct {
+-		size_t count;
+-		size_t probes;
+-		size_t longest;
+-	} success, failure;
+-
+-	/**
+-	 * Stats on the memory usage of the table
+-	 */
+-	struct {
+-		size_t count;
+-		size_t size;
+-	} max;
+-
+-	/**
+-	 * Keep track of where the hash table was created
+-	 */
+-	backtrace_t *backtrace;
+-};
+-
+-/**
+- * Print and cleanup profiling data
+- */
+-static inline void profiler_cleanup(hashtable_profile_t *profile, u_int count,
+-									u_int size)
+-{
+-	if (profile->success.count || profile->failure.count)
+-	{
+-		fprintf(stderr, "%zu elements [max. %zu], %zu buckets [%zu], %zu "
+-				"successful / %zu failed lookups, %.4f [%zu] / %.4f "
+-				"[%zu] avg. probes in table created at:",
+-				count, profile->max.count, size, profile->max.size,
+-				profile->success.count, profile->failure.count,
+-				(double)profile->success.probes/profile->success.count,
+-				profile->success.longest,
+-				(double)profile->failure.probes/profile->failure.count,
+-				profile->failure.longest);
+-		profile->backtrace->log(profile->backtrace, stderr, TRUE);
+-	}
+-	profile->backtrace->destroy(profile->backtrace);
+-}
+-
+-/**
+- * Initialize profiling data
+- */
+-static inline void profiler_init(hashtable_profile_t *profile, int skip)
+-{
+-	profile->backtrace = backtrace_create(skip);
+-}
+-
+-#define lookup_start() \
+-	u_int _lookup_probes = 0;
+-
+-#define lookup_probing() \
+-	_lookup_probes++;
+-
+-#define _lookup_done(profile, result) \
+-	(profile)->result.count++; \
+-	(profile)->result.probes += _lookup_probes; \
+-	(profile)->result.longest = max((profile)->result.longest, _lookup_probes);
+-
+-#define lookup_success(profile) _lookup_done(profile, success);
+-#define lookup_failure(profile) _lookup_done(profile, failure);
+-
+-static inline void profile_size(hashtable_profile_t *profile, u_int size)
+-{
+-	profile->max.size = max(profile->max.size, size);
+-}
+-
+-static inline void profile_count(hashtable_profile_t *profile, u_int count)
+-{
+-	profile->max.count = max(profile->max.count, count);
+-}
+-
+-#else /* !HASHTABLE_PROFILER */
+-
+-#define hashtable_profile_t struct {}
+-#define profiler_cleanup(...) {}
+-#define profiler_init(...) {}
+-#define lookup_start(...) {}
+-#define lookup_probing(...) {}
+-#define lookup_success(...) {}
+-#define lookup_failure(...) {}
+-#define profile_size(...) {}
+-#define profile_count(...) {}
+-
+-#endif /* HASHTABLE_PROFILER */
+-
+-#endif /* HASHTABLE_PROFILER_H_ */
+diff --git b/src/libstrongswan/tests/suites/test_hashtable.c a/src/libstrongswan/tests/suites/test_hashtable.c
+index 4e3baba6e..efc672e63 100644
+--- b/src/libstrongswan/tests/suites/test_hashtable.c
++++ a/src/libstrongswan/tests/suites/test_hashtable.c
+@@ -358,65 +358,6 @@ START_TEST(test_enumerator)
+ }
+ END_TEST
+ 
+-START_TEST(test_enumerator_order)
+-{
+-	char *k1 = "key1", *k2 = "key2", *k3 = "key3", *key;
+-	char *v1 = "val1", *v2 = "val2", *v3 = "val3", *v4 = "val4", *value;
+-	enumerator_t *enumerator;
+-	int count;
+-
+-	ht->put(ht, k1, v1);
+-	ht->put(ht, k2, v2);
+-	ht->put(ht, k3, v3);
+-
+-	count = 0;
+-	enumerator = ht->create_enumerator(ht);
+-	while (enumerator->enumerate(enumerator, &key, &value))
+-	{
+-		switch (count)
+-		{
+-			case 0:
+-				ck_assert(streq(key, k1) && streq(value, v1));
+-				break;
+-			case 1:
+-				ck_assert(streq(key, k2) && streq(value, v2));
+-				break;
+-			case 2:
+-				ck_assert(streq(key, k3) && streq(value, v3));
+-				break;
+-		}
+-		count++;
+-	}
+-	enumerator->destroy(enumerator);
+-	ck_assert_int_eq(count, 3);
+-
+-	value = ht->remove(ht, k2);
+-	ht->put(ht, k2, v2);
+-	ht->put(ht, k1, v4);
+-
+-	count = 0;
+-	enumerator = ht->create_enumerator(ht);
+-	while (enumerator->enumerate(enumerator, &key, &value))
+-	{
+-		switch (count)
+-		{
+-			case 0:
+-				ck_assert(streq(key, k1) && streq(value, v4));
+-				break;
+-			case 1:
+-				ck_assert(streq(key, k3) && streq(value, v3));
+-				break;
+-			case 2:
+-				ck_assert(streq(key, k2) && streq(value, v2));
+-				break;
+-		}
+-		count++;
+-	}
+-	enumerator->destroy(enumerator);
+-	ck_assert_int_eq(count, 3);
+-}
+-END_TEST
+-
+ /*******************************************************************************
+  * remove_at
+  */
+@@ -704,7 +645,6 @@ Suite *hashtable_suite_create()
+ 	tc = tcase_create("enumerator");
+ 	tcase_add_checked_fixture(tc, setup_ht, teardown_ht);
+ 	tcase_add_loop_test(tc, test_enumerator, 0, HASHTABLE_MAX);
+-	tcase_add_test(tc, test_enumerator_order);
+ 	suite_add_tcase(s, tc);
+ 
+ 	tc = tcase_create("remove_at");
+-- 
+2.20.1
+

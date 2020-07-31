@@ -4,6 +4,18 @@
 04_disable-libtls-tests.patch
 dont-load-kernel-libipsec-plugin-by-default.patch
 
+# Upstream patches
+
+# hashlist revert, to maintain original behavior
+0008-hashtable-Use-quadratic-probing.patch
+0007-vici-Store-configs-in-a-hashtable.patch
+0006-hashtable-Maintain-insertion-order-when-enumerating.patch
+0005-hashlist-Move-get_match-and-sorting-into-a-separate-.patch
+0004-unit-tests-Pass-test-iteration-to-fixtures.patch
+0003-hashtable-Optionally-collect-and-report-profiling-da.patch
+0002-hashtable-Optionally-sort-keys-items-in-buckets-in-a.patch
+0001-hashtable-Store-items-in-buckets-in-insertion-order.patch
+
 # Vyatta patches
 vyatta-revert-priority-base-changes-for-dataplane.patch
 vyatta-fix_main_table_routes.patch

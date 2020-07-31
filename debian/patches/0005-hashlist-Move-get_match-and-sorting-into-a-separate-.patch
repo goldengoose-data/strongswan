@@ -1,0 +1,1107 @@
+From d9944102f53ae4a48c03be89fa1da0544df518b9 Mon Sep 17 00:00:00 2001
+From: Tobias Brunner <tobias@strongswan.org>
+Date: Fri, 24 Apr 2020 13:41:53 +0200
+Subject: [PATCH 5/8] hashlist: Move get_match() and sorting into a separate
+ class
+
+The main intention here is that we can change the hashtable_t
+implementation without being impeded by the special requirements imposed
+by get_match() and sorting the keys/items in buckets.
+---
+ .../kernel_netlink/kernel_netlink_net.c       |  49 ++--
+ .../kernel_pfroute/kernel_pfroute_net.c       |  17 +-
+ src/libstrongswan/collections/hashtable.c     | 151 ++--------
+ src/libstrongswan/collections/hashtable.h     |  86 ++----
+ src/libstrongswan/plugins/plugin_loader.c     |  14 +-
+ .../tests/suites/test_hashtable.c             | 257 ++++++++----------
+ 6 files changed, 206 insertions(+), 368 deletions(-)
+
+diff --git b/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c a/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c
+index f174c2698..e40697214 100644
+--- b/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c
++++ a/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c
+@@ -330,12 +330,12 @@ struct private_kernel_netlink_net_t {
+ 	/**
+ 	 * Map for IP addresses to iface_entry_t objects (addr_map_entry_t)
+ 	 */
+-	hashlist_t *addrs;
++	hashtable_t *addrs;
+ 
+ 	/**
+ 	 * Map for virtual IP addresses to iface_entry_t objects (addr_map_entry_t)
+ 	 */
+-	hashlist_t *vips;
++	hashtable_t *vips;
+ 
+ 	/**
+ 	 * netlink rt socket (routing)
+@@ -375,7 +375,7 @@ struct private_kernel_netlink_net_t {
+ 	/**
+ 	 * installed routes
+ 	 */
+-	hashlist_t *routes;
++	hashtable_t *routes;
+ 
+ 	/**
+ 	 * mutex for routes
+@@ -499,7 +499,7 @@ static job_requeue_t reinstall_routes(private_kernel_netlink_net_t *this)
+ 	this->net_changes_lock->lock(this->net_changes_lock);
+ 	this->routes_lock->lock(this->routes_lock);
+ 
+-	enumerator = this->routes->ht.create_enumerator(&this->routes->ht);
++	enumerator = this->routes->create_enumerator(this->routes);
+ 	while (enumerator->enumerate(enumerator, NULL, (void**)&route))
+ 	{
+ 		net_change_t *change, lookup = {
+@@ -617,7 +617,7 @@ static bool is_known_vip(private_kernel_netlink_net_t *this, host_t *ip)
+ /**
+  * Add an address map entry
+  */
+-static void addr_map_entry_add(hashlist_t *map, addr_entry_t *addr,
++static void addr_map_entry_add(hashtable_t *map, addr_entry_t *addr,
+ 							   iface_entry_t *iface)
+ {
+ 	addr_map_entry_t *entry;
+@@ -627,14 +627,14 @@ static void addr_map_entry_add(hashlist_t *map, addr_entry_t *addr,
+ 		.addr = addr,
+ 		.iface = iface,
+ 	);
+-	entry = map->ht.put(&map->ht, entry, entry);
++	entry = map->put(map, entry, entry);
+ 	free(entry);
+ }
+ 
+ /**
+  * Remove an address map entry
+  */
+-static void addr_map_entry_remove(hashlist_t *map, addr_entry_t *addr,
++static void addr_map_entry_remove(hashtable_t *map, addr_entry_t *addr,
+ 								  iface_entry_t *iface)
+ {
+ 	addr_map_entry_t *entry, lookup = {
+@@ -643,7 +643,7 @@ static void addr_map_entry_remove(hashlist_t *map, addr_entry_t *addr,
+ 		.iface = iface,
+ 	};
+ 
+-	entry = map->ht.remove(&map->ht, &lookup);
++	entry = map->remove(map, &lookup);
+ 	free(entry);
+ }
+ 
+@@ -1241,7 +1241,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
+ 		};
+ 		addr_entry_t *addr;
+ 
+-		entry = this->vips->ht.get(&this->vips->ht, &lookup);
++		entry = this->vips->get(this->vips, &lookup);
+ 		if (entry)
+ 		{
+ 			if (hdr->nlmsg_type == RTM_NEWADDR)
+@@ -1261,7 +1261,7 @@ static void process_addr(private_kernel_netlink_net_t *this,
+ 			host->destroy(host);
+ 			return;
+ 		}
+-		entry = this->addrs->ht.get(&this->addrs->ht, &lookup);
++		entry = this->addrs->get(this->addrs, &lookup);
+ 		if (entry)
+ 		{
+ 			if (hdr->nlmsg_type == RTM_DELADDR)
+@@ -2726,7 +2726,7 @@ METHOD(kernel_net_t, add_route, status_t,
+ 	}
+ 
+ 	this->routes_lock->lock(this->routes_lock);
+-	found = this->routes->ht.get(&this->routes->ht, &lookup.route);
++	found = this->routes->get(this->routes, &lookup.route);
+ 	if (found)
+ 	{
+ 		this->routes_lock->unlock(this->routes_lock);
+@@ -2755,7 +2755,7 @@ METHOD(kernel_net_t, add_route, status_t,
+ 	if (status == SUCCESS)
+ 	{
+ 		found = route_entry_clone(&lookup.route);
+-		this->routes->ht.put(&this->routes->ht, found, found);
++		this->routes->put(this->routes, found, found);
+ 	}
+ 	this->routes_lock->unlock(this->routes_lock);
+ 	return status;
+@@ -2785,7 +2785,7 @@ METHOD(kernel_net_t, del_route, status_t,
+ 	}
+ 
+ 	this->routes_lock->lock(this->routes_lock);
+-	found = this->routes->ht.remove(&this->routes->ht, &lookup.route);
++	found = this->routes->remove(this->routes, &lookup.route);
+ 	if (!found)
+ 	{
+ 		this->routes_lock->unlock(this->routes_lock);
+@@ -3023,9 +3023,18 @@ static void check_kernel_features(private_kernel_netlink_net_t *this)
+ /**
+  * Destroy an address to iface map
+  */
+-static void addr_map_destroy(hashlist_t *map)
++static void addr_map_destroy(hashtable_t *map)
+ {
+-	map->ht.destroy_function(&map->ht, (void*)free);
++	enumerator_t *enumerator;
++	addr_map_entry_t *addr;
++
++	enumerator = map->create_enumerator(map);
++	while (enumerator->enumerate(enumerator, NULL, (void**)&addr))
++	{
++		free(addr);
++	}
++	enumerator->destroy(enumerator);
++	map->destroy(map);
+ }
+ 
+ METHOD(kernel_net_t, destroy, void,
+@@ -3046,7 +3055,7 @@ METHOD(kernel_net_t, destroy, void,
+ 		lib->watcher->remove(lib->watcher, this->socket_events);
+ 		close(this->socket_events);
+ 	}
+-	enumerator = this->routes->ht.create_enumerator(&this->routes->ht);
++	enumerator = this->routes->create_enumerator(this->routes);
+ 	while (enumerator->enumerate(enumerator, NULL, (void**)&route))
+ 	{
+ 		manage_srcroute(this, RTM_DELROUTE, 0, route->dst_net, route->prefixlen,
+@@ -3103,15 +3112,15 @@ kernel_netlink_net_t *kernel_netlink_net_create()
+ 			lib->settings->get_bool(lib->settings,
+ 				"%s.plugins.kernel-netlink.parallel_route", FALSE, lib->ns)),
+ 		.rt_exclude = linked_list_create(),
+-		.routes = hashlist_create((hashtable_hash_t)route_entry_hash,
+-								  (hashtable_equals_t)route_entry_equals, 16),
++		.routes = hashtable_create((hashtable_hash_t)route_entry_hash,
++								   (hashtable_equals_t)route_entry_equals, 16),
+ 		.net_changes = hashtable_create(
+ 								   (hashtable_hash_t)net_change_hash,
+ 								   (hashtable_equals_t)net_change_equals, 16),
+-		.addrs = hashlist_create(
++		.addrs = hashtable_create(
+ 								(hashtable_hash_t)addr_map_entry_hash,
+ 								(hashtable_equals_t)addr_map_entry_equals, 16),
+-		.vips = hashlist_create((hashtable_hash_t)addr_map_entry_hash,
++		.vips = hashtable_create((hashtable_hash_t)addr_map_entry_hash,
+ 								 (hashtable_equals_t)addr_map_entry_equals, 16),
+ 		.routes_lock = mutex_create(MUTEX_TYPE_DEFAULT),
+ 		.net_changes_lock = mutex_create(MUTEX_TYPE_DEFAULT),
+diff --git b/src/libcharon/plugins/kernel_pfroute/kernel_pfroute_net.c a/src/libcharon/plugins/kernel_pfroute/kernel_pfroute_net.c
+index 97eeda7d3..d28a6aa1f 100644
+--- b/src/libcharon/plugins/kernel_pfroute/kernel_pfroute_net.c
++++ a/src/libcharon/plugins/kernel_pfroute/kernel_pfroute_net.c
+@@ -323,7 +323,7 @@ struct private_kernel_pfroute_net_t
+ 	/**
+ 	 * Map for IP addresses to iface_entry_t objects (addr_map_entry_t)
+ 	 */
+-	hashlist_t *addrs;
++	hashtable_t *addrs;
+ 
+ 	/**
+ 	 * List of tun devices we installed for virtual IPs
+@@ -524,7 +524,7 @@ static void addr_map_entry_add(private_kernel_pfroute_net_t *this,
+ 		.addr = addr,
+ 		.iface = iface,
+ 	);
+-	entry = this->addrs->ht.put(&this->addrs->ht, entry, entry);
++	entry = this->addrs->put(this->addrs, entry, entry);
+ 	free(entry);
+ }
+ 
+@@ -541,7 +541,7 @@ static void addr_map_entry_remove(addr_entry_t *addr, iface_entry_t *iface,
+ 		.iface = iface,
+ 	};
+ 
+-	entry = this->addrs->ht.remove(&this->addrs->ht, &lookup);
++	entry = this->addrs->remove(this->addrs, &lookup);
+ 	free(entry);
+ }
+ 
+@@ -2013,6 +2013,7 @@ METHOD(kernel_net_t, destroy, void,
+ {
+ 	enumerator_t *enumerator;
+ 	route_entry_t *route;
++	addr_entry_t *addr;
+ 
+ 	enumerator = this->routes->create_enumerator(this->routes);
+ 	while (enumerator->enumerate(enumerator, NULL, (void**)&route))
+@@ -2035,7 +2036,13 @@ METHOD(kernel_net_t, destroy, void,
+ 	this->net_changes->destroy(this->net_changes);
+ 	this->net_changes_lock->destroy(this->net_changes_lock);
+ 
+-	this->addrs->ht.destroy_function(&this->addrs->ht, (void*)free);
++	enumerator = this->addrs->create_enumerator(this->addrs);
++	while (enumerator->enumerate(enumerator, NULL, (void**)&addr))
++	{
++		free(addr);
++	}
++	enumerator->destroy(enumerator);
++	this->addrs->destroy(this->addrs);
+ 	this->ifaces->destroy_function(this->ifaces, (void*)iface_entry_destroy);
+ 	this->tuns->destroy(this->tuns);
+ 	this->lock->destroy(this->lock);
+@@ -2071,7 +2078,7 @@ kernel_pfroute_net_t *kernel_pfroute_net_create()
+ 		},
+ 		.pid = getpid(),
+ 		.ifaces = linked_list_create(),
+-		.addrs = hashlist_create(
++		.addrs = hashtable_create(
+ 								(hashtable_hash_t)addr_map_entry_hash,
+ 								(hashtable_equals_t)addr_map_entry_equals, 16),
+ 		.routes = hashtable_create((hashtable_hash_t)route_entry_hash,
+diff --git b/src/libstrongswan/collections/hashtable.c a/src/libstrongswan/collections/hashtable.c
+index e569e581e..c89bf65e1 100644
+--- b/src/libstrongswan/collections/hashtable.c
++++ a/src/libstrongswan/collections/hashtable.c
+@@ -144,25 +144,6 @@ struct private_hashtable_t {
+ #endif
+ };
+ 
+-typedef struct private_hashlist_t private_hashlist_t;
+-
+-/**
+- * Private data of a hashlist_t object.
+- */
+-struct private_hashlist_t {
+-
+-	/**
+-	 * Public part of hash table.
+-	 */
+-	hashlist_t public;
+-
+-	/**
+-	 * Inherited private part of hash table (we get the public part too, but
+-	 * ignore it).
+-	 */
+-	private_hashtable_t super;
+-};
+-
+ #ifdef HASHTABLE_PROFILER
+ 
+ #define lookup_start() \
+@@ -380,7 +361,7 @@ static inline pair_t *find_key(private_hashtable_t *this, const void *key,
+ 	while (pair)
+ 	{
+ 		lookup_probing();
+-		/* when keys are sorted, we compare all items so we can abort earlier
++		/* when keys are ordered, we compare all items so we can abort earlier
+ 		 * even if the hash does not match, but only as long as we don't
+ 		 * have a callback */
+ 		if (!use_callback && this->cmp)
+@@ -464,6 +445,13 @@ METHOD(hashtable_t, get, void*,
+ 	return pair ? pair->value : NULL;
+ }
+ 
++METHOD(hashtable_t, get_match, void*,
++	private_hashtable_t *this, const void *key, hashtable_equals_t match)
++{
++	pair_t *pair = find_key(this, key, match, NULL, NULL);
++	return pair ? pair->value : NULL;
++}
++
+ METHOD(hashtable_t, remove_, void*,
+ 	private_hashtable_t *this, const void *key)
+ {
+@@ -607,84 +595,26 @@ static void destroy_internal(private_hashtable_t *this,
+ 		}
+ 	}
+ 	free(this->table);
++	free(this);
+ }
+ 
+ METHOD(hashtable_t, destroy, void,
+ 	private_hashtable_t *this)
+ {
+ 	destroy_internal(this, NULL);
+-	free(this);
+ }
+ 
+ METHOD(hashtable_t, destroy_function, void,
+ 	private_hashtable_t *this, void (*fn)(void*,const void*))
+ {
+ 	destroy_internal(this, fn);
+-	free(this);
+ }
+ 
+-METHOD(hashtable_t, create_enumerator_hashlist, enumerator_t*,
+-	private_hashlist_t *this)
+-{
+-	return create_enumerator(&this->super);
+-}
+-
+-METHOD(hashtable_t, put_hashlist, void*,
+-	private_hashlist_t *this, const void *key, void *value)
+-{
+-	return put(&this->super, key, value);
+-}
+-
+-METHOD(hashtable_t, get_hashlist, void*,
+-	private_hashlist_t *this, const void *key)
+-{
+-	return get(&this->super, key);
+-}
+-
+-METHOD(hashlist_t, get_match, void*,
+-	private_hashlist_t *this, const void *key, hashtable_equals_t match)
+-{
+-	pair_t *pair = find_key(&this->super, key, match, NULL, NULL);
+-	return pair ? pair->value : NULL;
+-}
+-
+-METHOD(hashtable_t, remove_hashlist, void*,
+-	private_hashlist_t *this, const void *key)
+-{
+-	return remove_(&this->super, key);
+-}
+-
+-METHOD(hashtable_t, remove_at_hashlist, void,
+-	private_hashlist_t *this, private_enumerator_t *enumerator)
+-{
+-	remove_at(&this->super, enumerator);
+-}
+-
+-METHOD(hashtable_t, get_count_hashlist, u_int,
+-	private_hashlist_t *this)
+-{
+-	return get_count(&this->super);
+-}
+-
+-METHOD2(hashtable_t, hashlist_t, destroy_hashlist, void,
+-	private_hashlist_t *this)
+-{
+-	destroy_internal(&this->super, NULL);
+-	free(this);
+-}
+-
+-METHOD(hashtable_t, destroy_function_hashlist, void,
+-	private_hashlist_t *this, void (*fn)(void*,const void*))
+-{
+-	destroy_internal(&this->super, fn);
+-	free(this);
+-}
+-
+-/*
+- * Described in header
++/**
++ * Create a hash table
+  */
+-hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
+-							  u_int size)
++static private_hashtable_t *hashtable_create_internal(hashtable_hash_t hash,
++													  u_int size)
+ {
+ 	private_hashtable_t *this;
+ 
+@@ -692,6 +622,7 @@ hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
+ 		.public = {
+ 			.put = _put,
+ 			.get = _get,
++			.get_match = _get_match,
+ 			.remove = _remove_,
+ 			.remove_at = (void*)_remove_at,
+ 			.get_count = _get_count,
+@@ -700,7 +631,6 @@ hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
+ 			.destroy_function = _destroy_function,
+ 		},
+ 		.hash = hash,
+-		.equals = equals,
+ 	);
+ 
+ 	init_hashtable(this, size);
+@@ -709,55 +639,18 @@ hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
+ 	this->backtrace = backtrace_create(3);
+ #endif
+ 
+-	return &this->public;
+-}
+-
+-/**
+- * Create a hash table
+- */
+-static private_hashlist_t *hashlist_create_internal(hashtable_hash_t hash,
+-													u_int size)
+-{
+-	private_hashlist_t *this;
+-
+-	INIT(this,
+-		.public = {
+-			.ht = {
+-				.put = _put_hashlist,
+-				.get = _get_hashlist,
+-				.remove = _remove_hashlist,
+-				.remove_at = (void*)_remove_at_hashlist,
+-				.get_count = _get_count_hashlist,
+-				.create_enumerator = _create_enumerator_hashlist,
+-				.destroy = _destroy_hashlist,
+-				.destroy_function = _destroy_function_hashlist,
+-			},
+-			.get_match = _get_match,
+-			.destroy = _destroy_hashlist,
+-		},
+-		.super = {
+-			.hash = hash,
+-		}
+-	);
+-
+-	init_hashtable(&this->super, size);
+-
+-#ifdef HASHTABLE_PROFILER
+-	this->super.backtrace = backtrace_create(3);
+-#endif
+-
+ 	return this;
+ }
+ 
+ /*
+  * Described in header
+  */
+-hashlist_t *hashlist_create(hashtable_hash_t hash, hashtable_equals_t equals,
+-							u_int size)
++hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
++							  u_int size)
+ {
+-	private_hashlist_t *this = hashlist_create_internal(hash, size);
++	private_hashtable_t *this = hashtable_create_internal(hash, size);
+ 
+-	this->super.equals = equals;
++	this->equals = equals;
+ 
+ 	return &this->public;
+ }
+@@ -765,12 +658,12 @@ hashlist_t *hashlist_create(hashtable_hash_t hash, hashtable_equals_t equals,
+ /*
+  * Described in header
+  */
+-hashlist_t *hashlist_create_sorted(hashtable_hash_t hash,
+-								   hashtable_cmp_t cmp, u_int size)
++hashtable_t *hashtable_create_sorted(hashtable_hash_t hash,
++									 hashtable_cmp_t cmp, u_int size)
+ {
+-	private_hashlist_t *this = hashlist_create_internal(hash, size);
++	private_hashtable_t *this = hashtable_create_internal(hash, size);
+ 
+-	this->super.cmp = cmp;
++	this->cmp = cmp;
+ 
+ 	return &this->public;
+ }
+diff --git b/src/libstrongswan/collections/hashtable.h a/src/libstrongswan/collections/hashtable.h
+index de0284920..e644c461a 100644
+--- b/src/libstrongswan/collections/hashtable.h
++++ a/src/libstrongswan/collections/hashtable.h
+@@ -24,7 +24,6 @@
+ #include <collections/enumerator.h>
+ 
+ typedef struct hashtable_t hashtable_t;
+-typedef struct hashlist_t hashlist_t;
+ 
+ /**
+  * Prototype for a function that computes the hash code from the given key.
+@@ -125,6 +124,25 @@ struct hashtable_t {
+ 	 */
+ 	void *(*get)(hashtable_t *this, const void *key);
+ 
++	/**
++	 * Returns the first value with a matching key, if the hash table contains
++	 * such an entry, otherwise NULL is returned.
++	 *
++	 * Compared to get() the given match function is used to compare the keys
++	 * for equality.  The hash function does have to be devised specially in
++	 * order to make this work if the match function compares keys differently
++	 * than the equals/comparison function provided to the constructor.
++	 *
++	 * This basically allows to enumerate all entries with the same hash value
++	 * in their key's order.
++	 *
++	 * @param key		the key to match against
++	 * @param match		match function to be used when comparing keys
++	 * @return			the value, NULL if not found
++	 */
++	void *(*get_match)(hashtable_t *this, const void *key,
++					   hashtable_equals_t match);
++
+ 	/**
+ 	 * Removes the value with the given key from the hash table and returns the
+ 	 * removed value (or NULL if no such value existed).
+@@ -165,52 +183,8 @@ struct hashtable_t {
+ };
+ 
+ /**
+- * Class implementing a hash table with ordered keys/items and special query
+- * method.
+- *
+- * @note The ordering only pertains to keys/items in the same bucket (with or
+- * without the same hash value), not to the order when enumerating.
+- *
+- * This is intended to be used with hash functions that intentionally return the
+- * same hash value for different keys so multiple items can be retrieved for a
+- * key.
+- *
+- * It's like storing sorted linked lists in a hash table but with less overhead.
+- */
+-struct hashlist_t {
+-
+-	/**
+-	 * Implements the hash table interface.
+-	 */
+-	hashtable_t ht;
+-
+-	/**
+-	 * Returns the first value with a matching key if the hash table contains
+-	 * such an entry, otherwise NULL is returned.
+-	 *
+-	 * Compared to get() the given match function is used to compare the keys
+-	 * for equality.  The hash function does have to be devised specially in
+-	 * order to make this work if the match function compares keys differently
+-	 * than the equals/comparison function provided to the constructor.
+-	 *
+-	 * This basically allows to enumerate all entries with the same hash value
+-	 * in their key's order.
+-	 *
+-	 * @param key		the key to match against
+-	 * @param match		match function to be used when comparing keys
+-	 * @return			the value, NULL if not found
+-	 */
+-	void *(*get_match)(hashlist_t *this, const void *key,
+-					   hashtable_equals_t match);
+-
+-	/**
+-	 * Destroys a hash list object.
+-	 */
+-	void (*destroy)(hashlist_t *this);
+-};
+-
+-/**
+- * Creates an empty hash table object.
++ * Creates an empty hash table object. Items in buckets are ordered in
++ * insertion order.
+  *
+  * @param hash			hash function
+  * @param equals		equals function
+@@ -221,25 +195,15 @@ hashtable_t *hashtable_create(hashtable_hash_t hash, hashtable_equals_t equals,
+ 							  u_int size);
+ 
+ /**
+- * Creates an empty hash list object with each bucket's keys in insertion order.
+- *
+- * @param hash			hash function
+- * @param equals		equals function
+- * @param size			initial size
+- * @return				hashtable_t object
+- */
+-hashlist_t *hashlist_create(hashtable_hash_t hash, hashtable_equals_t equals,
+-							u_int size);
+-
+-/**
+- * Creates an empty hash list object with sorted keys in each bucket.
++ * Creates an empty hash table object with keys in each bucket sorted according
++ * to the given comparison function.
+  *
+  * @param hash			hash function
+  * @param cmp			comparison function
+  * @param size			initial size
+  * @return				hashtable_t object.
+  */
+-hashlist_t *hashlist_create_sorted(hashtable_hash_t hash,
+-								   hashtable_cmp_t cmp, u_int size);
++hashtable_t *hashtable_create_sorted(hashtable_hash_t hash,
++									 hashtable_cmp_t cmp, u_int size);
+ 
+ #endif /** HASHTABLE_H_ @}*/
+diff --git b/src/libstrongswan/plugins/plugin_loader.c a/src/libstrongswan/plugins/plugin_loader.c
+index 8e70e5fe8..b694e97cd 100644
+--- b/src/libstrongswan/plugins/plugin_loader.c
++++ a/src/libstrongswan/plugins/plugin_loader.c
+@@ -65,7 +65,7 @@ struct private_plugin_loader_t {
+ 	/**
+ 	 * Hashtable for registered features, as registered_feature_t
+ 	 */
+-	hashlist_t *features;
++	hashtable_t *features;
+ 
+ 	/**
+ 	 * Loaded features (stored in reverse order), as provided_feature_t
+@@ -911,16 +911,14 @@ static void register_features(private_plugin_loader_t *this,
+ 		{
+ 			case FEATURE_PROVIDE:
+ 				lookup.feature = feature;
+-				registered = this->features->ht.get(&this->features->ht,
+-													&lookup);
++				registered = this->features->get(this->features, &lookup);
+ 				if (!registered)
+ 				{
+ 					INIT(registered,
+ 						.feature = feature,
+ 						.plugins = linked_list_create(),
+ 					);
+-					this->features->ht.put(&this->features->ht, registered,
+-										   registered);
++					this->features->put(this->features, registered, registered);
+ 				}
+ 				INIT(provided,
+ 					.entry = entry,
+@@ -952,13 +950,13 @@ static void unregister_feature(private_plugin_loader_t *this,
+ 	registered_feature_t *registered, lookup;
+ 
+ 	lookup.feature = provided->feature;
+-	registered = this->features->ht.get(&this->features->ht, &lookup);
++	registered = this->features->get(this->features, &lookup);
+ 	if (registered)
+ 	{
+ 		registered->plugins->remove(registered->plugins, provided, NULL);
+ 		if (registered->plugins->get_count(registered->plugins) == 0)
+ 		{
+-			this->features->ht.remove(&this->features->ht, &lookup);
++			this->features->remove(this->features, &lookup);
+ 			registered->plugins->destroy(registered->plugins);
+ 			free(registered);
+ 		}
+@@ -1446,7 +1444,7 @@ plugin_loader_t *plugin_loader_create()
+ 		},
+ 		.plugins = linked_list_create(),
+ 		.loaded = linked_list_create(),
+-		.features = hashlist_create(
++		.features = hashtable_create(
+ 							(hashtable_hash_t)registered_feature_hash,
+ 							(hashtable_equals_t)registered_feature_equals, 64),
+ 	);
+diff --git b/src/libstrongswan/tests/suites/test_hashtable.c a/src/libstrongswan/tests/suites/test_hashtable.c
+index efc672e63..25d85d09d 100644
+--- b/src/libstrongswan/tests/suites/test_hashtable.c
++++ a/src/libstrongswan/tests/suites/test_hashtable.c
+@@ -19,22 +19,17 @@
+ #include <utils/chunk.h>
+ 
+ /*******************************************************************************
+- * hash table functions
++ * string hash table functions
+  */
+ 
+-static u_int hash_match(char *key)
++static u_int hash(char *key)
+ {
+-	return chunk_hash(chunk_create(key, 4));
++	return chunk_hash(chunk_from_str(key));
+ }
+ 
+-static bool equal_match(char *key1, char *key2)
++static bool equals(char *key1, char *key2)
+ {
+-	if (!strneq(key1, key2, 4))
+-	{
+-		return FALSE;
+-	}
+-	/* look for an item with a key < than what we look for */
+-	return strcmp(key1, key2) >= 0;
++	return streq(key1, key2);
+ }
+ 
+ /*******************************************************************************
+@@ -43,77 +38,17 @@ static bool equal_match(char *key1, char *key2)
+ 
+ static hashtable_t *ht;
+ 
+-typedef enum {
+-	/* regular string hash table */
+-	HASHTABLE_REGULAR,
+-	/* regular string hash list */
+-	HASHLIST_REGULAR,
+-	/* sorted string hash list */
+-	HASHLIST_REGULAR_SORTED,
+-	REGULAR_MAX,
+-	/* hash table with only 4 characters hashed -> one bucket tests */
+-	HASHTABLE_FUZZY = REGULAR_MAX,
+-	/* hash list with only 4 characters hashed */
+-	HASHLIST_FUZZY,
+-	/* sorted string hash list with only 4 characters hashed */
+-	HASHLIST_FUZZY_SORTED,
+-	HASHTABLE_MAX,
+-} hashtable_type_t;
+-
+-/**
+- * Create a specific hash table/list
+- */
+-static hashtable_t *create_hashtable(int i)
+-{
+-	hashlist_t *hl = NULL;
+-
+-	DESTROY_IF(ht);
+-
+-	switch (i)
+-	{
+-		case HASHTABLE_REGULAR:
+-			ht = hashtable_create(hashtable_hash_str,
+-								  hashtable_equals_str, 0);
+-			break;
+-		case HASHLIST_REGULAR:
+-			hl = hashlist_create(hashtable_hash_str,
+-								 hashtable_equals_str, 0);
+-			break;
+-		case HASHLIST_REGULAR_SORTED:
+-			hl = hashlist_create_sorted(hashtable_hash_str,
+-									   (hashtable_cmp_t)strcmp, 0);
+-			break;
+-		case HASHTABLE_FUZZY:
+-			ht = hashtable_create((hashtable_hash_t)hash_match,
+-								  hashtable_equals_str, 0);
+-			break;
+-		case HASHLIST_FUZZY:
+-			hl = hashlist_create((hashtable_hash_t)hash_match,
+-								 hashtable_equals_str, 0);
+-			break;
+-		case HASHLIST_FUZZY_SORTED:
+-			hl = hashlist_create_sorted((hashtable_hash_t)hash_match,
+-										(hashtable_cmp_t)strcmp, 0);
+-			break;
+-	}
+-	if (hl)
+-	{
+-		ht = &hl->ht;
+-	}
+-	ck_assert_int_eq(ht->get_count(ht), 0);
+-	return ht;
+-}
+-
+ START_SETUP(setup_ht)
+ {
+-	create_hashtable(_i);
++	ht = hashtable_create((hashtable_hash_t)hash,
++						  (hashtable_equals_t)equals, 0);
++	ck_assert_int_eq(ht->get_count(ht), 0);
+ }
+ END_SETUP
+ 
+ START_TEARDOWN(teardown_ht)
+ {
+ 	ht->destroy(ht);
+-	ht = NULL;
+ }
+ END_TEARDOWN
+ 
+@@ -151,13 +86,28 @@ END_TEST
+  * get_match
+  */
+ 
++static u_int hash_match(char *key)
++{
++	return chunk_hash(chunk_create(key, 4));
++}
++
++static bool equal_match(char *key1, char *key2)
++{
++	if (!strneq(key1, key2, 4))
++	{
++		return FALSE;
++	}
++	/* look for an item with a key < than what we look for */
++	return strcmp(key1, key2) >= 0;
++}
++
+ START_TEST(test_get_match)
+ {
+-	hashlist_t *hl;
+ 	char *k1 = "key1_a", *k2 = "key2", *k3 = "key1_b", *k4 = "key1_c";
+ 	char *v1 = "val1", *v2 = "val2", *v3 = "val3", *value;
+ 
+-	hl = (hashlist_t*)create_hashtable(HASHLIST_FUZZY);
++	ht = hashtable_create((hashtable_hash_t)hash_match,
++						  (hashtable_equals_t)equals, 0);
+ 
+ 	ht->put(ht, k1, v1);
+ 	ht->put(ht, k2, v2);
+@@ -168,31 +118,31 @@ START_TEST(test_get_match)
+ 	ck_assert(streq(ht->get(ht, k3), v3));
+ 	ck_assert(value == NULL);
+ 
+-	value = hl->get_match(hl, k1, (hashtable_equals_t)equal_match);
++	value = ht->get_match(ht, k1, (hashtable_equals_t)equal_match);
+ 	ck_assert(value != NULL);
+ 	ck_assert(streq(value, v1));
+-	value = hl->get_match(hl, k2, (hashtable_equals_t)equal_match);
++	value = ht->get_match(ht, k2, (hashtable_equals_t)equal_match);
+ 	ck_assert(value != NULL);
+ 	ck_assert(streq(value, v2));
+-	value = hl->get_match(hl, k3, (hashtable_equals_t)equal_match);
++	value = ht->get_match(ht, k3, (hashtable_equals_t)equal_match);
+ 	ck_assert(value != NULL);
+ 	ck_assert(streq(value, v1));
+-	value = hl->get_match(hl, k4, (hashtable_equals_t)equal_match);
++	value = ht->get_match(ht, k4, (hashtable_equals_t)equal_match);
+ 	ck_assert(value != NULL);
+ 	ck_assert(streq(value, v1));
++
++	ht->destroy(ht);
+ }
+ END_TEST
+ 
+ START_TEST(test_get_match_remove)
+ {
+-	hashlist_t *hl;
+ 	char *k1 = "key1_a", *k2 = "key2", *k3 = "key1_b", *k4 = "key1_c";
+ 	char *v1 = "val1", *v2 = "val2", *v3 = "val3", *value;
+ 
+-	hl = (hashlist_t*)create_hashtable(HASHLIST_FUZZY);
++	ht = hashtable_create((hashtable_hash_t)hash_match,
++						  (hashtable_equals_t)equals, 0);
+ 
+-	/* by removing and reinserting the first item we verify that insertion
+-	 * order is adhered */
+ 	ht->put(ht, k1, v1);
+ 	ht->put(ht, k2, v2);
+ 	ht->put(ht, k3, v3);
+@@ -203,30 +153,31 @@ START_TEST(test_get_match_remove)
+ 	ck_assert(streq(ht->get(ht, k2), v2));
+ 	ck_assert(streq(ht->get(ht, k3), v3));
+ 
+-	value = hl->get_match(hl, k1, (hashtable_equals_t)equal_match);
++	value = ht->get_match(ht, k1, (hashtable_equals_t)equal_match);
+ 	ck_assert(value != NULL);
+ 	ck_assert(streq(value, v1));
+-	value = hl->get_match(hl, k2, (hashtable_equals_t)equal_match);
++	value = ht->get_match(ht, k2, (hashtable_equals_t)equal_match);
+ 	ck_assert(value != NULL);
+ 	ck_assert(streq(value, v2));
+-	value = hl->get_match(hl, k3, (hashtable_equals_t)equal_match);
++	value = ht->get_match(ht, k3, (hashtable_equals_t)equal_match);
+ 	ck_assert(value != NULL);
+ 	ck_assert(streq(value, v3));
+-	value = hl->get_match(hl, k4, (hashtable_equals_t)equal_match);
++	value = ht->get_match(ht, k4, (hashtable_equals_t)equal_match);
+ 	ck_assert(value != NULL);
+ 	ck_assert(streq(value, v3));
++
++	ht->destroy(ht);
+ }
+ END_TEST
+ 
+ START_TEST(test_get_match_sorted)
+ {
+-	hashlist_t *hl;
+ 	char *k1 = "key1_a", *k2 = "key2", *k3 = "key1_b", *k4 = "key1_c";
+ 	char *v1 = "val1", *v2 = "val2", *v3 = "val3", *value;
+ 
+-	hl = (hashlist_t*)create_hashtable(HASHLIST_FUZZY_SORTED);
++	ht = hashtable_create_sorted((hashtable_hash_t)hash_match,
++								 (hashtable_cmp_t)strcmp, 0);
+ 
+-	/* since the keys are sorted, the insertion order doesn't matter */
+ 	ht->put(ht, k3, v3);
+ 	ht->put(ht, k2, v2);
+ 	ht->put(ht, k1, v1);
+@@ -239,18 +190,20 @@ START_TEST(test_get_match_sorted)
+ 	ck_assert(streq(ht->get(ht, k3), v3));
+ 	ck_assert(streq(ht->get(ht, k4), v1));
+ 
+-	value = hl->get_match(hl, k1, (hashtable_equals_t)equal_match);
++	value = ht->get_match(ht, k1, (hashtable_equals_t)equal_match);
+ 	ck_assert(value != NULL);
+ 	ck_assert(streq(value, v1));
+-	value = hl->get_match(hl, k2, (hashtable_equals_t)equal_match);
++	value = ht->get_match(ht, k2, (hashtable_equals_t)equal_match);
+ 	ck_assert(value != NULL);
+ 	ck_assert(streq(value, v2));
+-	value = hl->get_match(hl, k3, (hashtable_equals_t)equal_match);
++	value = ht->get_match(ht, k3, (hashtable_equals_t)equal_match);
+ 	ck_assert(value != NULL);
+ 	ck_assert(streq(value, v1));
+-	value = hl->get_match(hl, k4, (hashtable_equals_t)equal_match);
++	value = ht->get_match(ht, k4, (hashtable_equals_t)equal_match);
+ 	ck_assert(value != NULL);
+ 	ck_assert(streq(value, v1));
++
++	ht->destroy(ht);
+ }
+ END_TEST
+ 
+@@ -299,6 +252,38 @@ START_TEST(test_remove_one_bucket)
+ {
+ 	char *k1 = "key1_a", *k2 = "key1_b", *k3 = "key1_c";
+ 
++	ht->destroy(ht);
++	ht = hashtable_create((hashtable_hash_t)hash_match,
++						  (hashtable_equals_t)equals, 0);
++
++	do_remove(k1, k2, k3);
++	do_remove(k3, k2, k1);
++	do_remove(k1, k3, k2);
++}
++END_TEST
++
++START_TEST(test_remove_sorted)
++{
++	char *k1 = "key1", *k2 = "key2", *k3 = "key3";
++
++	ht->destroy(ht);
++	ht = hashtable_create_sorted((hashtable_hash_t)hash,
++								 (hashtable_cmp_t)strcmp, 0);
++
++	do_remove(k1, k2, k3);
++	do_remove(k3, k2, k1);
++	do_remove(k1, k3, k2);
++}
++END_TEST
++
++START_TEST(test_remove_sorted_one_bucket)
++{
++	char *k1 = "key1_a", *k2 = "key1_b", *k3 = "key1_c";
++
++	ht->destroy(ht);
++	ht = hashtable_create_sorted((hashtable_hash_t)hash_match,
++								 (hashtable_cmp_t)strcmp, 0);
++
+ 	do_remove(k1, k2, k3);
+ 	do_remove(k3, k2, k1);
+ 	do_remove(k1, k3, k2);
+@@ -419,10 +404,15 @@ START_TEST(test_remove_at_one_bucket)
+ {
+ 	char *k1 = "key1_a", *k2 = "key1_b", *k3 = "key1_c";
+ 
++	ht->destroy(ht);
++	ht = hashtable_create((hashtable_hash_t)hash_match,
++						  (hashtable_equals_t)equals, 0);
++
+ 	do_remove_at(k1, k2, k3);
+ }
+ END_TEST
+ 
++
+ /*******************************************************************************
+  * many items
+  */
+@@ -442,63 +432,34 @@ static int cmp_int(int *key1, int *key2)
+ 	return *key1 - *key2;
+ }
+ 
+-/**
+- * Create a specific hash table with integers as keys.
+- */
+-static hashtable_t *create_int_hashtable(int i)
+-{
+-	hashlist_t *hl = NULL;
+-
+-	DESTROY_IF(ht);
+-
+-	switch (i)
+-	{
+-		case HASHTABLE_REGULAR:
+-			ht = hashtable_create((hashtable_hash_t)hash_int,
+-								  (hashtable_equals_t)equals_int, 0);
+-			break;
+-		case HASHLIST_REGULAR:
+-			hl = hashlist_create((hashtable_hash_t)hash_int,
+-								 (hashtable_equals_t)equals_int, 0);
+-			break;
+-		case HASHLIST_REGULAR_SORTED:
+-			hl = hashlist_create_sorted((hashtable_hash_t)hash_int,
+-										(hashtable_cmp_t)cmp_int, 0);
+-			break;
+-	}
+-	if (hl)
+-	{
+-		ht = &hl->ht;
+-	}
+-	ck_assert_int_eq(ht->get_count(ht), 0);
+-	return ht;
+-}
+-
+ START_SETUP(setup_ht_many)
+ {
+-	create_int_hashtable(_i >> 1);
++	ht = hashtable_create((hashtable_hash_t)hash_int,
++						  (hashtable_equals_t)equals_int, 0);
++	ck_assert_int_eq(ht->get_count(ht), 0);
+ }
+ END_SETUP
+ 
+-START_SETUP(setup_ht_lookups)
++START_SETUP(setup_ht_many_cmp)
+ {
+-	create_int_hashtable(_i);
++	ht = hashtable_create_sorted((hashtable_hash_t)hash_int,
++								 (hashtable_cmp_t)cmp_int, 0);
++	ck_assert_int_eq(ht->get_count(ht), 0);
+ }
+ END_SETUP
+ 
+ START_TEARDOWN(teardown_ht_many)
+ {
+ 	ht->destroy_function(ht, (void*)free);
+-	ht = NULL;
+ }
+ END_TEARDOWN
+ 
+ START_TEST(test_many_items)
+ {
+-	u_int count = 100000;
++	u_int count = 250000;
+ 	int i, *val, r;
+ 
+-#define GET_VALUE(i) ({ (_i % 2) == 0 ? i : (count-1-i); })
++#define GET_VALUE(i) ({ _i == 0 ? i : (count-1-i); })
+ 
+ 	for (i = 0; i < count; i++)
+ 	{
+@@ -626,11 +587,10 @@ Suite *hashtable_suite_create()
+ 
+ 	tc = tcase_create("put/get");
+ 	tcase_add_checked_fixture(tc, setup_ht, teardown_ht);
+-	tcase_add_loop_test(tc, test_put_get, 0, HASHTABLE_MAX);
++	tcase_add_test(tc, test_put_get);
+ 	suite_add_tcase(s, tc);
+ 
+ 	tc = tcase_create("get_match");
+-	tcase_add_checked_fixture(tc, NULL, teardown_ht);
+ 	tcase_add_test(tc, test_get_match);
+ 	tcase_add_test(tc, test_get_match_remove);
+ 	tcase_add_test(tc, test_get_match_sorted);
+@@ -638,32 +598,39 @@ Suite *hashtable_suite_create()
+ 
+ 	tc = tcase_create("remove");
+ 	tcase_add_checked_fixture(tc, setup_ht, teardown_ht);
+-	tcase_add_loop_test(tc, test_remove, 0, REGULAR_MAX);
+-	tcase_add_loop_test(tc, test_remove_one_bucket, HASHTABLE_FUZZY, HASHTABLE_MAX);
++	tcase_add_test(tc, test_remove);
++	tcase_add_test(tc, test_remove_one_bucket);
++	tcase_add_test(tc, test_remove_sorted);
++	tcase_add_test(tc, test_remove_sorted_one_bucket);
+ 	suite_add_tcase(s, tc);
+ 
+ 	tc = tcase_create("enumerator");
+ 	tcase_add_checked_fixture(tc, setup_ht, teardown_ht);
+-	tcase_add_loop_test(tc, test_enumerator, 0, HASHTABLE_MAX);
++	tcase_add_test(tc, test_enumerator);
+ 	suite_add_tcase(s, tc);
+ 
+ 	tc = tcase_create("remove_at");
+ 	tcase_add_checked_fixture(tc, setup_ht, teardown_ht);
+-	tcase_add_loop_test(tc, test_remove_at, 0, REGULAR_MAX);
+-	tcase_add_loop_test(tc, test_remove_at_one_bucket, HASHTABLE_FUZZY, HASHTABLE_MAX);
++	tcase_add_test(tc, test_remove_at);
++	tcase_add_test(tc, test_remove_at_one_bucket);
+ 	suite_add_tcase(s, tc);
+ 
+ 	tc = tcase_create("many items");
+ 	tcase_add_checked_fixture(tc, setup_ht_many, teardown_ht_many);
+ 	tcase_set_timeout(tc, 10);
+-	tcase_add_loop_test(tc, test_many_items, 0, REGULAR_MAX << 1);
++	tcase_add_loop_test(tc, test_many_items, 0, 2);
++	tcase_add_test(tc, test_many_lookups_success);
++	tcase_add_test(tc, test_many_lookups_failure_larger);
++	tcase_add_test(tc, test_many_lookups_failure_smaller);
+ 	suite_add_tcase(s, tc);
+ 
+-	tc = tcase_create("many lookups");
+-	tcase_add_checked_fixture(tc, setup_ht_lookups, teardown_ht_many);
+-	tcase_add_loop_test(tc, test_many_lookups_success, 0, REGULAR_MAX);
+-	tcase_add_loop_test(tc, test_many_lookups_failure_larger, 0, REGULAR_MAX);
+-	tcase_add_loop_test(tc, test_many_lookups_failure_smaller, 0, REGULAR_MAX);
++	tc = tcase_create("many items sorted");
++	tcase_add_checked_fixture(tc, setup_ht_many_cmp, teardown_ht_many);
++	tcase_set_timeout(tc, 10);
++	tcase_add_loop_test(tc, test_many_items, 0, 2);
++	tcase_add_test(tc, test_many_lookups_success);
++	tcase_add_test(tc, test_many_lookups_failure_larger);
++	tcase_add_test(tc, test_many_lookups_failure_smaller);
+ 	suite_add_tcase(s, tc);
+ 
+ 	return s;
+-- 
+2.20.1
+

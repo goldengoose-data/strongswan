@@ -1,0 +1,90 @@
+From 4334f61284b18a539d6b900f67955134078224fe Mon Sep 17 00:00:00 2001
+From: Tobias Brunner <tobias@strongswan.org>
+Date: Fri, 24 Apr 2020 14:45:21 +0200
+Subject: [PATCH 4/8] unit-tests: Pass test iteration to fixtures
+
+---
+ src/libstrongswan/tests/test_runner.c | 12 ++++++------
+ src/libstrongswan/tests/test_suite.h  |  6 +++---
+ 2 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git b/src/libstrongswan/tests/test_runner.c a/src/libstrongswan/tests/test_runner.c
+index 1e7f3ce1f..603495c13 100644
+--- b/src/libstrongswan/tests/test_runner.c
++++ a/src/libstrongswan/tests/test_runner.c
+@@ -215,7 +215,7 @@ static bool run_test(test_function_t *tfun, int i)
+ /**
+  * Invoke fixture setup/teardown
+  */
+-static bool call_fixture(test_case_t *tcase, bool up, int i)
++static bool call_fixture(test_case_t *tcase, bool up)
+ {
+ 	enumerator_t *enumerator;
+ 	test_fixture_t *fixture;
+@@ -230,14 +230,14 @@ static bool call_fixture(test_case_t *tcase, bool up, int i)
+ 			{
+ 				if (fixture->setup)
+ 				{
+-					fixture->setup(i);
++					fixture->setup();
+ 				}
+ 			}
+ 			else
+ 			{
+ 				if (fixture->teardown)
+ 				{
+-					fixture->teardown(i);
++					fixture->teardown();
+ 				}
+ 			}
+ 		}
+@@ -519,18 +519,18 @@ static bool run_case(test_case_t *tcase, test_runner_init_t init, char *cfg)
+ 				test_setup_timeout(tcase->timeout);
+ 				start_timing(&start);
+ 
+-				if (call_fixture(tcase, TRUE, i))
++				if (call_fixture(tcase, TRUE))
+ 				{
+ 					if (run_test(tfun, i))
+ 					{
+-						if (call_fixture(tcase, FALSE, i))
++						if (call_fixture(tcase, FALSE))
+ 						{
+ 							ok = TRUE;
+ 						}
+ 					}
+ 					else
+ 					{
+-						call_fixture(tcase, FALSE, i);
++						call_fixture(tcase, FALSE);
+ 					}
+ 				}
+ 				if (!post_test(init, ok, failures, tfun->name, i, &leaks))
+diff --git b/src/libstrongswan/tests/test_suite.h a/src/libstrongswan/tests/test_suite.h
+index a35e9ec63..3bc3b38ca 100644
+--- b/src/libstrongswan/tests/test_suite.h
++++ a/src/libstrongswan/tests/test_suite.h
+@@ -51,7 +51,7 @@ typedef void (*test_function_cb_t)(int);
+ /**
+  * Fixture for a test case.
+  */
+-typedef void (*test_fixture_cb_t)(int);
++typedef void (*test_fixture_cb_t)(void);
+ 
+ /**
+  * A test suite; a collection of test cases with fixtures
+@@ -388,9 +388,9 @@ void test_fail_if_worker_failed();
+ #define suite_add_tcase test_suite_add_case
+ #define START_TEST(name) static void name (int _i) {
+ #define END_TEST test_fail_if_worker_failed(); }
+-#define START_SETUP(name) static void name(int _i) {
++#define START_SETUP(name) static void name() {
+ #define END_SETUP test_fail_if_worker_failed(); }
+-#define START_TEARDOWN(name) static void name(int _i) {
++#define START_TEARDOWN(name) static void name() {
+ #define END_TEARDOWN test_fail_if_worker_failed(); }
+ 
+ #endif /** TEST_SUITE_H_ @}*/
+-- 
+2.20.1
+
