@@ -165,6 +165,7 @@ FUZZING_CFLAGS = @FUZZING_CFLAGS@
 FUZZING_LDFLAGS = @FUZZING_LDFLAGS@
 GEM = @GEM@
 GENHTML = @GENHTML@
+GIT_VERSION = @GIT_VERSION@
 GPERF = @GPERF@
 GPERF_LEN_TYPE = @GPERF_LEN_TYPE@
 GPRBUILD = @GPRBUILD@
@@ -483,8 +484,8 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
-@RUBY_GEMS_INSTALL_FALSE@install-data-local:
 @RUBY_GEMS_INSTALL_FALSE@uninstall-local:
+@RUBY_GEMS_INSTALL_FALSE@install-data-local:
 clean: clean-am
 
 clean-am: clean-generic clean-libtool clean-local mostlyclean-am
