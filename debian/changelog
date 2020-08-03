@@ -1,8 +1,9 @@
-strongswan (5.9.0-0danos1) UNRELEASED; urgency=medium
+strongswan (5.9.0-0danos1) unstable; urgency=medium
 
   * New upstream version 5.9.0
+  * Revert upstream hashlist/hashtable changes
 
- -- Daniel Gollub <dgollub@att.com>  Fri, 31 Jul 2020 11:40:00 +0200
+ -- Daniel Gollub <dgollub@att.com>  Mon, 03 Aug 2020 13:54:08 +0200
 
 strongswan (5.9.0dr2-0danos1) unstable; urgency=medium
 
