@@ -347,3 +347,15 @@ Section: python
 Priority: extra
 Description: VICI python bindings
  VICI python bindings for charon.
+
+Package: strongswan-libcharon-dev
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, strongswan-libcharon (= ${binary:Version})
+Description: Development file for strongSwan charon library
+ Contains C header files and development files for strongswan-libcharon.
+
+Package: libstrongswan-dev
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, libstrongswan (= ${binary:Version})
+Description: Development file for strongswan library
+ Contains C header files and development files for libstrongswan.

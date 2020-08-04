@@ -3,6 +3,9 @@ export DEB_LDFLAGS_MAINT_APPEND=-Wl,-O1
 #export DEB_LDFLAGS_MAINT_APPEND=-Wl,--as-needed -Wl,-O1 -Wl,-z,defs
 export DEB_BUILD_MAINT_OPTIONS=hardening=+all
 
+# get DEB_VERSION_UPSTERAM
+include /usr/share/dpkg/pkg-info.mk
+
 CONFIGUREARGS := --libdir=/usr/lib --libexecdir=/usr/lib \
 		--enable-addrblock \
 		--enable-agent \
@@ -196,6 +199,16 @@ endif
 	cd $(CURDIR)/src/libcharon/plugins/vici/python/ && $(PYTHON) setup.py install --install-layout=deb --root=$(CURDIR)/debian/python3-vici
 	rm -rf $(CURDIR)/debian/python3-vici/usr/lib/python*/dist-packages/vici-*.egg-info/
 	rm -rf $(CURDIR)/debian/python3-vici/usr/lib/python*/dist-packages/vici/__pycache__/
+
+# DANOS: libcharon and libstrongswan dev packages
+	mkdir -p $(CURDIR)/debian/tmp/usr/include/strongswan
+	cp -rf $(CURDIR)/src/libcharon/ $(CURDIR)/debian/tmp/usr/include/strongswan
+	cp -rf $(CURDIR)/src/libstrongswan/ $(CURDIR)/debian/tmp/usr/include/strongswan
+	find $(CURDIR)/debian/tmp/usr/include/strongswan -type f ! -name "*.h" -delete
+	find $(CURDIR)/debian/tmp/usr/include/strongswan -type d -name ".libs" | xargs --no-run-if-empty rm -rf
+	mkdir -p $(CURDIR)/debian/tmp/usr/share/pkgconfig
+	sed "s/@VERSION@/$(DEB_VERSION_UPSTREAM)/g" $(CURDIR)/debian/libstrongswan.pc.in > $(CURDIR)/debian/tmp/usr/share/pkgconfig/libstrongswan.pc
+	sed "s/@VERSION@/$(DEB_VERSION_UPSTREAM)/g" $(CURDIR)/debian/libcharon.pc.in > $(CURDIR)/debian/tmp/usr/share/pkgconfig/libcharon.pc
 
 	# then install the rest, ignoring the above
 	dh_install \
