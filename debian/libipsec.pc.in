@@ -1,0 +1,15 @@
+prefix=/usr
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib/ipsec
+includedir=${prefix}/include/strongswan
+datarootdir=${prefix}/share
+datadir=${datarootdir}
+sysconfdir=/etc
+
+plugindir=${libdir}/plugins
+
+Name: libstrongswan
+Description: strongSwan's libipsec library.
+Version: @VERSION@
+Cflags: -I${includedir}/libipsec
+Libs: -L${libdir} -lipsec -Wl,-rpath -Wl,${libdir}

@@ -359,3 +359,9 @@ Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}, libstrongswan (= ${binary:Version})
 Description: Development file for strongswan library
  Contains C header files and development files for libstrongswan.
+
+Package: strongswan-libipsec-dev
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, libcharon-extra-plugins (= ${binary:Version})
+Description: Development file for strongSwan libipsec library
+ Contains C header files and development files for strongswan-libipsec.

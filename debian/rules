@@ -203,12 +203,14 @@ endif
 # DANOS: libcharon and libstrongswan dev packages
 	mkdir -p $(CURDIR)/debian/tmp/usr/include/strongswan
 	cp -rf $(CURDIR)/src/libcharon/ $(CURDIR)/debian/tmp/usr/include/strongswan
+	cp -rf $(CURDIR)/src/libipsec/ $(CURDIR)/debian/tmp/usr/include/strongswan
 	cp -rf $(CURDIR)/src/libstrongswan/ $(CURDIR)/debian/tmp/usr/include/strongswan
 	find $(CURDIR)/debian/tmp/usr/include/strongswan -type f ! -name "*.h" -delete
 	find $(CURDIR)/debian/tmp/usr/include/strongswan -type d -name ".libs" | xargs --no-run-if-empty rm -rf
 	mkdir -p $(CURDIR)/debian/tmp/usr/share/pkgconfig
 	sed "s/@VERSION@/$(DEB_VERSION_UPSTREAM)/g" $(CURDIR)/debian/libstrongswan.pc.in > $(CURDIR)/debian/tmp/usr/share/pkgconfig/libstrongswan.pc
 	sed "s/@VERSION@/$(DEB_VERSION_UPSTREAM)/g" $(CURDIR)/debian/libcharon.pc.in > $(CURDIR)/debian/tmp/usr/share/pkgconfig/libcharon.pc
+	sed "s/@VERSION@/$(DEB_VERSION_UPSTREAM)/g" $(CURDIR)/debian/libipsec.pc.in > $(CURDIR)/debian/tmp/usr/share/pkgconfig/libipsec.pc
 
 	# then install the rest, ignoring the above
 	dh_install \
