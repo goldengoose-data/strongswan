@@ -340,10 +340,11 @@ am__libstrongswan_la_SOURCES_DIST = library.c asn1/asn1.c \
 	asn1/asn1_parser.c asn1/oid.c bio/bio_reader.c \
 	bio/bio_writer.c collections/blocking_queue.c \
 	collections/enumerator.c collections/hashtable.c \
-	collections/array.c collections/linked_list.c \
-	crypto/crypters/crypter.c crypto/drbgs/drbg.c \
-	crypto/hashers/hasher.c crypto/hashers/hash_algorithm_set.c \
-	crypto/proposal/proposal.c crypto/proposal/proposal_keywords.c \
+	collections/hashlist.c collections/array.c \
+	collections/linked_list.c crypto/crypters/crypter.c \
+	crypto/drbgs/drbg.c crypto/hashers/hasher.c \
+	crypto/hashers/hash_algorithm_set.c crypto/proposal/proposal.c \
+	crypto/proposal/proposal_keywords.c \
 	crypto/proposal/proposal_keywords_static.c crypto/prfs/prf.c \
 	crypto/prfs/mac_prf.c crypto/pkcs5.c crypto/rngs/rng.c \
 	crypto/rngs/rng_tester.c crypto/prf_plus.c \
@@ -430,9 +431,10 @@ am_libstrongswan_la_OBJECTS = library.lo asn1/asn1.lo \
 	asn1/asn1_parser.lo asn1/oid.lo bio/bio_reader.lo \
 	bio/bio_writer.lo collections/blocking_queue.lo \
 	collections/enumerator.lo collections/hashtable.lo \
-	collections/array.lo collections/linked_list.lo \
-	crypto/crypters/crypter.lo crypto/drbgs/drbg.lo \
-	crypto/hashers/hasher.lo crypto/hashers/hash_algorithm_set.lo \
+	collections/hashlist.lo collections/array.lo \
+	collections/linked_list.lo crypto/crypters/crypter.lo \
+	crypto/drbgs/drbg.lo crypto/hashers/hasher.lo \
+	crypto/hashers/hash_algorithm_set.lo \
 	crypto/proposal/proposal.lo \
 	crypto/proposal/proposal_keywords.lo \
 	crypto/proposal/proposal_keywords_static.lo crypto/prfs/prf.lo \
@@ -562,11 +564,12 @@ am__nobase_strongswan_include_HEADERS_DIST = library.h asn1/asn1.h \
 	asn1/asn1_parser.h asn1/oid.h bio/bio_reader.h \
 	bio/bio_writer.h collections/blocking_queue.h \
 	collections/enumerator.h collections/hashtable.h \
-	collections/linked_list.h collections/array.h \
-	collections/dictionary.h crypto/crypters/crypter.h \
-	crypto/drbgs/drbg.h crypto/hashers/hasher.h \
-	crypto/hashers/hash_algorithm_set.h crypto/mac.h \
-	crypto/proposal/proposal.h crypto/proposal/proposal_keywords.h \
+	collections/hashtable_profiler.h collections/linked_list.h \
+	collections/array.h collections/dictionary.h \
+	crypto/crypters/crypter.h crypto/drbgs/drbg.h \
+	crypto/hashers/hasher.h crypto/hashers/hash_algorithm_set.h \
+	crypto/mac.h crypto/proposal/proposal.h \
+	crypto/proposal/proposal_keywords.h \
 	crypto/proposal/proposal_keywords_static.h crypto/rngs/rng.h \
 	crypto/rngs/rng_tester.h crypto/prfs/prf.h \
 	crypto/prfs/mac_prf.h crypto/nonce_gen.h crypto/prf_plus.h \
@@ -746,6 +749,7 @@ FUZZING_CFLAGS = @FUZZING_CFLAGS@
 FUZZING_LDFLAGS = @FUZZING_LDFLAGS@
 GEM = @GEM@
 GENHTML = @GENHTML@
+GIT_VERSION = @GIT_VERSION@
 GPERF = @GPERF@
 GPERF_LEN_TYPE = @GPERF_LEN_TYPE@
 GPRBUILD = @GPRBUILD@
@@ -958,11 +962,11 @@ ipseclib_LTLIBRARIES = libstrongswan.la
 libstrongswan_la_SOURCES = library.c asn1/asn1.c asn1/asn1_parser.c \
 	asn1/oid.c bio/bio_reader.c bio/bio_writer.c \
 	collections/blocking_queue.c collections/enumerator.c \
-	collections/hashtable.c collections/array.c \
-	collections/linked_list.c crypto/crypters/crypter.c \
-	crypto/drbgs/drbg.c crypto/hashers/hasher.c \
-	crypto/hashers/hash_algorithm_set.c crypto/proposal/proposal.c \
-	crypto/proposal/proposal_keywords.c \
+	collections/hashtable.c collections/hashlist.c \
+	collections/array.c collections/linked_list.c \
+	crypto/crypters/crypter.c crypto/drbgs/drbg.c \
+	crypto/hashers/hasher.c crypto/hashers/hash_algorithm_set.c \
+	crypto/proposal/proposal.c crypto/proposal/proposal_keywords.c \
 	crypto/proposal/proposal_keywords_static.c crypto/prfs/prf.c \
 	crypto/prfs/mac_prf.c crypto/pkcs5.c crypto/rngs/rng.c \
 	crypto/rngs/rng_tester.c crypto/prf_plus.c \
@@ -1024,6 +1028,7 @@ settings/settings_types.h
 @USE_DEV_HEADERS_TRUE@library.h \
 @USE_DEV_HEADERS_TRUE@asn1/asn1.h asn1/asn1_parser.h asn1/oid.h bio/bio_reader.h bio/bio_writer.h \
 @USE_DEV_HEADERS_TRUE@collections/blocking_queue.h collections/enumerator.h collections/hashtable.h \
+@USE_DEV_HEADERS_TRUE@collections/hashtable_profiler.h \
 @USE_DEV_HEADERS_TRUE@collections/linked_list.h collections/array.h collections/dictionary.h \
 @USE_DEV_HEADERS_TRUE@crypto/crypters/crypter.h crypto/drbgs/drbg.h crypto/hashers/hasher.h \
 @USE_DEV_HEADERS_TRUE@crypto/hashers/hash_algorithm_set.h crypto/mac.h crypto/proposal/proposal.h \
@@ -1300,6 +1305,8 @@ collections/blocking_queue.lo: collections/$(am__dirstamp) \
 collections/enumerator.lo: collections/$(am__dirstamp) \
 	collections/$(DEPDIR)/$(am__dirstamp)
 collections/hashtable.lo: collections/$(am__dirstamp) \
+	collections/$(DEPDIR)/$(am__dirstamp)
+collections/hashlist.lo: collections/$(am__dirstamp) \
 	collections/$(DEPDIR)/$(am__dirstamp)
 collections/array.lo: collections/$(am__dirstamp) \
 	collections/$(DEPDIR)/$(am__dirstamp)
@@ -1857,6 +1864,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@collections/$(DEPDIR)/array.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@collections/$(DEPDIR)/blocking_queue.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@collections/$(DEPDIR)/enumerator.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@collections/$(DEPDIR)/hashlist.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@collections/$(DEPDIR)/hashtable.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@collections/$(DEPDIR)/linked_list.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@credentials/$(DEPDIR)/auth_cfg.Plo@am__quote@
