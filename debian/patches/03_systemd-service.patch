@@ -9,7 +9,7 @@ Subject: Tune the ipsec systemd service file
  1 file changed, 2 insertions(+), 1 deletion(-)
 
 diff --git a/init/systemd-starter/strongswan-starter.service.in b/init/systemd-starter/strongswan-starter.service.in
-index 474284a..8060d1e 100644
+index 6a06723..53b6ffc 100644
 --- a/init/systemd-starter/strongswan-starter.service.in
 +++ b/init/systemd-starter/strongswan-starter.service.in
 @@ -1,9 +1,10 @@
@@ -21,6 +21,6 @@ index 474284a..8060d1e 100644
  [Service]
  ExecStart=@SBINDIR@/@IPSEC_SCRIPT@ start --nofork
 +ExecReload=@SBINDIR@/@IPSEC_SCRIPT@ reload
- StandardOutput=syslog
  Restart=on-abnormal
  
+ [Install]
