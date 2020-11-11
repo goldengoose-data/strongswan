@@ -78,6 +78,17 @@ It will also trigger a MOBIKE update if NAT mappings were removed during the
 downtime.
 
 .TP
+.BR charon.cisco_flexvpn " [no]"
+Send the Cisco FlexVPN vendor ID payload, which is required in order to make
+Cisco brand devices allow negotiating a local traffic selector (from
+strongSwan's point of view) that is not the assigned virtual IP address if such
+an address is requested by    strongSwan.  Sending the Cisco FlexVPN vendor ID
+prevents the peer from narrowing the initiator's local traffic selector and
+allows it to e.g. negotiate a TS of 0.0.0.0/0 == 0.0.0.0/0 instead.  This has
+been tested with a "tunnel mode ipsec ipv4" Cisco template but should also work
+for GRE encapsulation.
+
+.TP
 .BR charon.cisco_unity " [no]"
 Send Cisco Unity vendor ID payload (IKEv1 only).
 
@@ -197,6 +208,10 @@ Enabling this option disables block buffering and enables line buffering.
 .BR charon.filelog.<name>.ike_name " [no]"
 Prefix each log entry with the connection name and a unique numerical identifier
 for each IKE_SA.
+
+.TP
+.BR charon.filelog.<name>.log_level " [no]"
+Add the log level of each message after the subsystem (e.g. [IKE2]).
 
 .TP
 .BR charon.filelog.<name>.path " []"
@@ -1336,7 +1351,7 @@ IKE proposal to use in load test.
 
 .TP
 .BR charon.plugins.load-tester.request_virtual_ip " [no]"
-Request an INTERNAL_IPV4_ADDR from the server.
+Request an INTERNAL_IPV4_ADDR and INTERNAL_IPV6_ADDR from the server.
 
 .TP
 .BR charon.plugins.load-tester.responder " [127.0.0.1]"
@@ -2052,6 +2067,10 @@ Prefix each log entry with the connection name and a unique numerical identifier
 for each IKE_SA.
 
 .TP
+.BR charon.syslog.<facility>.log_level " [no]"
+Add the log level of each message after the subsystem (e.g. [IKE2]).
+
+.TP
 .BR charon.syslog.identifier " []"
 Global identifier used for an
 .RB "" "openlog" "(3)"
@@ -2163,6 +2182,10 @@ AIK object handle.
 .TP
 .BR libimcv.plugins.imc-attestation.aik_pubkey " []"
 AIK public key file.
+
+.TP
+.BR libimcv.plugins.imc-attestation.hash_algorithm " [sha384]"
+Preferred measurement hash algorithm.
 
 .TP
 .BR libimcv.plugins.imc-attestation.mandatory_dh_groups " [yes]"
@@ -2390,7 +2413,7 @@ Path to directory with AIK cacerts.
 Preferred Diffie\-Hellman group.
 
 .TP
-.BR libimcv.plugins.imv-attestation.hash_algorithm " [sha256]"
+.BR libimcv.plugins.imv-attestation.hash_algorithm " [sha384]"
 Preferred measurement hash algorithm.
 
 .TP
