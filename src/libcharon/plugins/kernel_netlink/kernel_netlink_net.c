@@ -942,8 +942,9 @@ static host_t *get_matching_address(private_kernel_netlink_net_t *this,
 				{	/* optionally match a subnet */
 					continue;
 				}
-				if (candidate && candidate->ip_equals(candidate, addr->ip))
-				{	/* stop if we find the candidate */
+				if (candidate && candidate->ip_equals(candidate, addr->ip) &&
+					!(addr->flags & IFA_F_DEPRECATED))
+				{	/* stop if we find the candidate and it's not deprecated */
 					best = addr;
 					candidate_matched = TRUE;
 					break;
@@ -1277,6 +1278,17 @@ static void process_addr(private_kernel_netlink_net_t *this,
 				}
 				addr_map_entry_remove(this->addrs, addr, iface);
 				addr_entry_destroy(addr);
+			}
+			else if (entry->addr->flags != msg->ifa_flags)
+			{
+				found = TRUE;
+				entry->addr->flags = msg->ifa_flags;
+				if (event && iface->usable)
+				{
+					changed = TRUE;
+					DBG1(DBG_KNL, "flags changed for %H on %s", host,
+						 iface->ifname);
+				}
 			}
 		}
 		else
@@ -3034,7 +3046,7 @@ METHOD(kernel_net_t, destroy, void,
 	enumerator_t *enumerator;
 	route_entry_t *route;
 
-	if (this->routing_table)
+	if (this->routing_table && this->socket)
 	{
 		manage_rule(this, RTM_DELRULE, AF_INET, this->routing_table,
 					this->routing_table_prio);
