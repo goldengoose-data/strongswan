@@ -1,0 +1,42 @@
+--- a/src/libcharon/kernel/kernel_interface.h
++++ b/src/libcharon/kernel/kernel_interface.h
+@@ -79,6 +79,8 @@
+ 	KERNEL_NO_POLICY_UPDATES = (1<<3),
+ 	/** IPsec backend supports installing SPIs on policies */
+ 	KERNEL_POLICY_SPI = (1<<4),
++	/** IPsec backend does not provide usage times via policies */
++	KERNEL_POLICY_NO_TIME = (1 << 5),
+ };
+ 
+ /**
+--- a/src/libcharon/sa/child_sa.c
++++ b/src/libcharon/sa/child_sa.c
+@@ -690,11 +690,27 @@
+ 	return TRUE;
+ }
+ 
++/**
++ * Check kernel interface if policy provide usage time
++ */
++static bool policy_provides_no_time()
++{
++	kernel_feature_t f;
++
++	f = charon->kernel->get_features(charon->kernel);
++	return !(f & KERNEL_POLICY_NO_TIME);
++}
++
+ METHOD(child_sa_t, get_usestats, void,
+ 	private_child_sa_t *this, bool inbound,
+ 	time_t *time, uint64_t *bytes, uint64_t *packets)
+ {
+-	if ((!bytes && !packets) || update_usebytes(this, inbound) != FAILED)
++	if (policy_provides_no_time())
++	{
++		update_usebytes(this, inbound);
++	}
++	else if ((!bytes && !packets)
++		 || update_usebytes(this, inbound) != FAILED)
+ 	{
+ 		/* there was traffic since last update or the kernel interface
+ 		 * does not support querying the number of usebytes.
