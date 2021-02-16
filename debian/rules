@@ -3,6 +3,9 @@ export DEB_LDFLAGS_MAINT_APPEND=-Wl,-O1
 #export DEB_LDFLAGS_MAINT_APPEND=-Wl,--as-needed -Wl,-O1 -Wl,-z,defs
 export DEB_BUILD_MAINT_OPTIONS=hardening=+all
 
+# DANOS specific: disable signal handler, to obtain vanilla cores
+export DEB_CFLAGS_MAINT_APPEND=-DDISABLE_SIGNAL_HANDLER
+
 # get DEB_VERSION_UPSTERAM
 include /usr/share/dpkg/pkg-info.mk
 
