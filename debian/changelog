@@ -1,3 +1,10 @@
+strongswan (5.9.0-0danos3) unstable; urgency=medium
+
+  * policy: introduce kernel-ipsec flag KERNEL_POLICY_NO_TIME
+  * debian: disable signal handler for SIGSEGV, SIGILL, SIGBUS
+
+ -- Daniel Gollub <dgollub@att.com>  Tue, 16 Feb 2021 11:43:48 +0100
+
 strongswan (5.9.0-0danos2) unstable; urgency=medium
 
   * debian: package libcharon and libstrongswan headers
