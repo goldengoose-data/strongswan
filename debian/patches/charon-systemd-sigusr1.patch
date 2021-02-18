@@ -1,0 +1,31 @@
+--- a/src/charon-systemd/charon-systemd.c
++++ b/src/charon-systemd/charon-systemd.c
+@@ -214,6 +214,7 @@
+ 	sigemptyset(&set);
+ 	sigaddset(&set, SIGHUP);
+ 	sigaddset(&set, SIGTERM);
++	sigaddset(&set, SIGUSR1);
+ 	sigprocmask(SIG_BLOCK, &set, NULL);
+ 
+ 	sd_notify(0, "READY=1\n");
+@@ -255,6 +256,12 @@
+ 				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
+ 				return 0;
+ 			}
++			case SIGUSR1:
++			{	/* an error occurred */
++				DBG1(DBG_DMN, "SIGUSR1 received, shutting down");
++				charon->bus->alert(charon->bus, ALERT_SHUTDOWN_SIGNAL, sig);
++				return 1;
++			}
+ 		}
+ 	}
+ }
+@@ -389,6 +396,7 @@
+ 	sigaddset(&action.sa_mask, SIGINT);
+ 	sigaddset(&action.sa_mask, SIGTERM);
+ 	sigaddset(&action.sa_mask, SIGHUP);
++	sigaddset(&action.sa_mask, SIGUSR1);
+ 
+ 	/* optionally let the external system handle fatal signals */
+ #ifndef DISABLE_SIGNAL_HANDLER
