@@ -1,3 +1,9 @@
+strongswan (5.9.0-0danos4) unstable; urgency=medium
+
+  * charon-systemd: handle SIGUSR1 as error shutdown
+
+ -- Daniel Gollub <dgollub@att.com>  Mon, 22 Feb 2021 14:50:55 +0100
+
 strongswan (5.9.0-0danos3) unstable; urgency=medium
 
   * policy: introduce kernel-ipsec flag KERNEL_POLICY_NO_TIME
