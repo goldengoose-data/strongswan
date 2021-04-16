@@ -1,0 +1,35 @@
+--- a/src/libcharon/sa/ikev2/tasks/child_create.c
++++ b/src/libcharon/sa/ikev2/tasks/child_create.c
+@@ -1670,10 +1670,12 @@
+ 					DBG1(DBG_IKE, "received %N notify, will retry later",
+ 						 notify_type_names, type);
+ 					enumerator->destroy(enumerator);
++#if 0 /** vyatta-ike-sa-daemon performs the delayed retry. */
+ 					if (!this->rekey)
+ 					{	/* the rekey task will retry itself if necessary */
+ 						schedule_delayed_retry(this);
+ 					}
++#endif
+ 					return SUCCESS;
+ 				}
+ 				case INVALID_KE_PAYLOAD:
+--- a/src/libcharon/tests/suites/test_child_create.c
++++ b/src/libcharon/tests/suites/test_child_create.c
+@@ -63,7 +63,7 @@
+ 
+ 	/* <-- CREATE_CHILD_SA { N(TEMP_FAIL) } */
+ 	assert_hook_not_called(child_updown);
+-	assert_jobs_scheduled(1);
++	assert_jobs_scheduled(0);
+ 	exchange_test_helper->process_message(exchange_test_helper, a, NULL);
+ 	assert_child_sa_count(a, 1);
+ 	assert_scheduler();
+@@ -80,7 +80,7 @@
+ 	 * and it can't be initiated immediately */
+ 	ck_assert(!exchange_test_helper->sender->dequeue(exchange_test_helper->sender));
+ 	assert_num_tasks(a, 0, TASK_QUEUE_ACTIVE);
+-	assert_num_tasks(a, 1, TASK_QUEUE_QUEUED);
++	assert_num_tasks(a, 0, TASK_QUEUE_QUEUED);
+ 	call_ikesa(a, initiate, NULL, 0, NULL, NULL);
+ 	assert_num_tasks(a, 0, TASK_QUEUE_ACTIVE);
+ 
