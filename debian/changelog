@@ -1,3 +1,9 @@
+strongswan (5.9.0-0danos5) unstable; urgency=medium
+
+  * ikev2: disable rekeying on TEMPORARY_FAILURE response
+
+ -- Daniel Gollub <dgollub@att.com>  Mon, 26 Apr 2021 14:48:47 +0200
+
 strongswan (5.9.0-0danos4) unstable; urgency=medium
 
   * charon-systemd: handle SIGUSR1 as error shutdown
