@@ -1,3 +1,9 @@
+strongswan (5.7.2-1danos5) unstable; urgency=medium
+
+  * ikev2: disable rekeying on TEMPORARY_FAILURE response
+
+ -- Daniel Gollub <dgollub@att.com>  Fri, 30 Apr 2021 09:19:26 +0200
+
 strongswan (5.7.2-1danos4) unstable; urgency=medium
 
   * Disable signal handler for external core processing tools
