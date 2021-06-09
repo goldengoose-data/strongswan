@@ -16,6 +16,9 @@ dont-load-kernel-libipsec-plugin-by-default.patch
 0002-hashtable-Optionally-sort-keys-items-in-buckets-in-a.patch
 0001-hashtable-Store-items-in-buckets-in-insertion-order.patch
 
+# fix checkout race seen in load-tester usage
+ike-sa-manager-Make-checkout_by_config-atomic.patch
+
 # Vyatta patches
 vyatta-revert-priority-base-changes-for-dataplane.patch
 vyatta-fix_main_table_routes.patch
