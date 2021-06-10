@@ -1,3 +1,9 @@
+strongswan (5.9.0-0danos6) unstable; urgency=medium
+
+  * ike-sa-manager: Make checkout_by_config atomic
+
+ -- Daniel Gollub <dgollub@att.com>  Thu, 10 Jun 2021 11:15:25 +0200
+
 strongswan (5.9.0-0danos5) unstable; urgency=medium
 
   * ikev2: disable rekeying on TEMPORARY_FAILURE response
