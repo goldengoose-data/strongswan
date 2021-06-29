@@ -1,0 +1,80 @@
+From: Daniel Gollub <dgollub@att.com>
+Subject: load-tester: "async" option to perfrom non-blocking initates
+
+---
+ .../plugins/load_tester/load_tester_control.c    | 16 ++++++++++++++--
+ 1 file changed, 14 insertions(+), 2 deletions(-)
+
+--- a/src/libcharon/plugins/load_tester/load_tester_control.c
++++ b/src/libcharon/plugins/load_tester/load_tester_control.c
+@@ -182,8 +182,11 @@ static bool on_accept(private_load_teste
+ 	peer_cfg_t *peer_cfg;
+ 	child_cfg_t *child_cfg;
+ 	u_int i, count, failed = 0, delay = 0;
+-	char buf[16] = "";
++	char buf[32] = "";
+ 	FILE *stream;
++	bool async = false;
++	controller_cb_t controller_cb = initiate_cb;
++	void *controller_param;
+ 
+ 	stream = io->get_file(io);
+ 	if (!stream)
+@@ -214,8 +217,17 @@ static bool on_accept(private_load_teste
+ 		.condvar = condvar_create(CONDVAR_TYPE_DEFAULT),
+ 	);
+ 
++	controller_param = listener;
++
+ 	charon->bus->add_listener(charon->bus, &listener->listener);
+ 
++	if (strstr(buf, "async"))
++	{
++		async = true;
++		controller_cb = NULL;
++		controller_param = NULL;
++	}
++
+ 	for (i = 0; i < count; i++)
+ 	{
+ 		peer_cfg = charon->backends->get_peer_cfg_by_name(charon->backends,
+@@ -239,13 +251,14 @@ static bool on_accept(private_load_teste
+ 
+ 		switch (charon->controller->initiate(charon->controller,
+ 										peer_cfg, child_cfg->get_ref(child_cfg),
+-										(void*)initiate_cb, listener, 0, FALSE))
++										(void*)controller_cb, controller_param, 0, FALSE))
+ 		{
+ 			case NEED_MORE:
+ 				/* Callback returns FALSE once it got track of this IKE_SA.
+ 				 * FALL */
+ 			case SUCCESS:
+-				fprintf(stream, ".");
++				if (!async)
++					fprintf(stream, ".");
+ 				break;
+ 			default:
+ 				fprintf(stream, "!");
+@@ -255,7 +268,13 @@ static bool on_accept(private_load_teste
+ 		{
+ 			usleep(delay * 1000);
+ 		}
++		if (!async)
++			fflush(stream);
++	}
++
++	if (async) {
+ 		fflush(stream);
++		goto skip_wait_completed;
+ 	}
+ 
+ 	listener->mutex->lock(listener->mutex);
+@@ -265,6 +284,8 @@ static bool on_accept(private_load_teste
+ 	}
+ 	listener->mutex->unlock(listener->mutex);
+ 
++skip_wait_completed:
++
+ 	charon->bus->remove_listener(charon->bus, &listener->listener);
+ 
+ 	listener->initiated->destroy(listener->initiated);
