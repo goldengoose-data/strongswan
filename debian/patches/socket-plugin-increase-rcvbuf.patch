@@ -1,0 +1,59 @@
+--- a/src/libcharon/plugins/socket_default/socket_default_socket.c
++++ b/src/libcharon/plugins/socket_default/socket_default_socket.c
+@@ -150,6 +150,12 @@ struct private_socket_default_socket_t {
+ 	 * A counter to implement round-robin selection of read sockets
+ 	 */
+ 	u_int rr_counter;
++
++	/**
++	 * Socket receive buffer size
++	 */
++	int rcvbuf;
++
+ };
+ 
+ /**
+@@ -704,6 +710,15 @@ static int open_socket(private_socket_de
+ 		return -1;
+ 	}
+ 
++	if (this->rcvbuf && setsockopt(skt, SOL_SOCKET, SO_RCVBUF,
++								   (void*)&this->rcvbuf,
++								   sizeof(this->rcvbuf)) < 0)
++	{
++			DBG1(DBG_NET, "unable to set SO_RCVBUF on socket to %d: %s",
++				 this->rcvbuf, strerror(errno));
++			return -1;
++	}
++
+ 	/* bind the socket */
+ 	if (bind(skt, &addr.sockaddr, addrlen) < 0)
+ 	{
+@@ -876,6 +891,8 @@ socket_default_socket_t *socket_default_
+ 		.set_sourceif = lib->settings->get_bool(lib->settings,
+ 							"%s.plugins.socket-default.set_sourceif", FALSE,
+ 							lib->ns),
++		.rcvbuf = lib->settings->get_int(lib->settings,
++							"%s.plugins.socket-default.rcvbuf", 0, lib->ns),
+ 	);
+ 
+ 	if (this->port && this->port == this->natt)
+--- a/conf/plugins/socket-default.conf
++++ b/conf/plugins/socket-default.conf
+@@ -19,5 +19,7 @@ socket-default {
+     # Listen on IPv6, if possible.
+     # use_ipv6 = yes
+ 
++    # Set custom socket receive buffer size.
++    # rcvbuf = 0
+ }
+ 
+--- a/conf/plugins/socket-default.opt
++++ b/conf/plugins/socket-default.opt
+@@ -15,3 +15,6 @@ charon.plugins.socket-default.use_ipv4 =
+ 
+ charon.plugins.socket-default.use_ipv6 = yes
+ 	Listen on IPv6, if possible.
++
++charon.plugins.socket-default.rcvbuf = 0
++	Set custom socket receive buffer size.
