@@ -1,3 +1,9 @@
+strongswan (5.9.0-0danos7) unstable; urgency=medium
+
+  * socket-default: introduce rcvbuf option
+
+ -- Daniel Gollub <dgollub@att.com>  Thu, 08 Jul 2021 10:31:18 +0200
+
 strongswan (5.9.0-0danos6) unstable; urgency=medium
 
   * ike-sa-manager: Make checkout_by_config atomic
