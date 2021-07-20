@@ -1,0 +1,10 @@
+--- a/src/libcharon/plugins/load_tester/load_tester_config.c
++++ b/src/libcharon/plugins/load_tester/load_tester_config.c
+@@ -692,6 +692,7 @@
+ 		.version = this->version,
+ 		.remote_port = IKEV2_UDP_PORT,
+ 		.source_interface = NULL,
++		.no_certreq = TRUE,
+ 	};
+ 	peer_cfg_create_t peer = {
+ 		.cert_policy = CERT_SEND_IF_ASKED,
