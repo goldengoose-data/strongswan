@@ -1,3 +1,9 @@
+strongswan (5.9.0-0danos8) unstable; urgency=medium
+
+  * load-tester: "async" option to perform non-blocking IKE_SA_INIT
+
+ -- Daniel Gollub <dgollub@att.com>  Tue, 20 Jul 2021 13:40:22 +0200
+
 strongswan (5.9.0-0danos7) unstable; urgency=medium
 
   * socket-default: introduce rcvbuf option
