@@ -1,0 +1,11 @@
+--- a/src/libcharon/plugins/load_tester/load_tester_control.c
++++ b/src/libcharon/plugins/load_tester/load_tester_control.c
+@@ -266,7 +266,7 @@
+ 		}
+ 		if (delay)
+ 		{
+-			usleep(delay * 1000);
++			usleep(delay);
+ 		}
+ 		if (!async)
+ 			fflush(stream);
