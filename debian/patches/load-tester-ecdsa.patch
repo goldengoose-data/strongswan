@@ -1,0 +1,39 @@
+--- a/src/libcharon/plugins/load_tester/load_tester_creds.c
++++ b/src/libcharon/plugins/load_tester/load_tester_creds.c
+@@ -219,7 +219,7 @@
+ 					BUILD_END);
+ 	}
+ 	DBG1(DBG_CFG, "loading load-tester private key from '%s'", path);
+-	return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_RSA,
++	return lib->creds->create(lib->creds, CRED_PRIVATE_KEY, KEY_ANY,
+ 					BUILD_FROM_FILE, path, BUILD_END);
+ }
+ 
+@@ -288,7 +288,7 @@
+ 	{
+ 		return NULL;
+ 	}
+-	if (type != KEY_ANY && type != KEY_RSA)
++	if (type != KEY_ANY && type != KEY_RSA && type != KEY_ECDSA)
+ 	{
+ 		return NULL;
+ 	}
+@@ -323,7 +323,7 @@
+ 	{
+ 		return NULL;
+ 	}
+-	if (key != KEY_ANY && key != KEY_RSA)
++	if (key != KEY_ANY && key != KEY_RSA && key != KEY_ECDSA)
+ 	{
+ 		return NULL;
+ 	}
+--- a/src/libcharon/plugins/load_tester/load_tester_plugin.c
++++ b/src/libcharon/plugins/load_tester/load_tester_plugin.c
+@@ -236,6 +236,7 @@
+ 		PLUGIN_CALLBACK((plugin_feature_callback_t)register_load_tester, NULL),
+ 			PLUGIN_PROVIDE(CUSTOM, "load-tester"),
+ 				PLUGIN_DEPENDS(CUSTOM, "kernel-net"),
++				PLUGIN_SDEPEND(PRIVKEY, KEY_ECDSA),
+ 				PLUGIN_SDEPEND(PRIVKEY, KEY_RSA),
+ 				PLUGIN_SDEPEND(CERT_DECODE, CERT_ANY),
+ 				PLUGIN_SDEPEND(CERT_DECODE, CERT_X509),
