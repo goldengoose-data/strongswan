@@ -1,3 +1,11 @@
+strongswan (5.9.0-0danos9) unstable; urgency=medium
+
+  * load-tester: allow to configure delay in microseconds
+  * load-tester: do not send certreq
+  * load-tester: add ECDSA support
+
+ -- Daniel Gollub <dgollub@att.com>  Tue, 27 Jul 2021 13:30:47 +0200
+
 strongswan (5.9.0-0danos8) unstable; urgency=medium
 
   * load-tester: "async" option to perform non-blocking IKE_SA_INIT
