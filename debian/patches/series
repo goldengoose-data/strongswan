@@ -50,3 +50,4 @@ load-tester-async-option-to-perfrom-non-blocking-ini.patch
 load-tester-delay-us.patch
 load-tester-no-certreq.patch
 load-tester-ecdsa.patch
+child-sa-kernel-async-install.patch

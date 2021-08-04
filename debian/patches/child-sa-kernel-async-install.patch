@@ -1,0 +1,212 @@
+--- a/src/libcharon/kernel/kernel_interface.c
++++ b/src/libcharon/kernel/kernel_interface.c
+@@ -442,6 +442,17 @@
+ 	return NOT_FOUND;
+ }
+ 
++METHOD(kernel_interface_t, wait_for_reqid, status_t,
++	private_kernel_interface_t *this, uint32_t reqid)
++{
++	if (!this->ipsec)
++	{
++		return NOT_SUPPORTED;
++	}
++
++	return this->ipsec->wait_for_reqid(this->ipsec, reqid);
++}
++
+ METHOD(kernel_interface_t, add_sa, status_t,
+ 	private_kernel_interface_t *this, kernel_ipsec_sa_id_t *id,
+ 	kernel_ipsec_add_sa_t *data)
+@@ -1029,6 +1040,7 @@
+ 			.get_cpi = _get_cpi,
+ 			.alloc_reqid = _alloc_reqid,
+ 			.release_reqid = _release_reqid,
++			.wait_for_reqid = _wait_for_reqid,
+ 			.add_sa = _add_sa,
+ 			.update_sa = _update_sa,
+ 			.query_sa = _query_sa,
+--- a/src/libcharon/kernel/kernel_interface.h
++++ b/src/libcharon/kernel/kernel_interface.h
+@@ -81,6 +81,10 @@
+ 	KERNEL_POLICY_SPI = (1<<4),
+ 	/** IPsec backend does not provide usage times via policies */
+ 	KERNEL_POLICY_NO_TIME = (1 << 5),
++	/** IPsec backend performs async SA installation */
++	KERNEL_SA_ASYNC = (1<<6),
++	/** IPsec backend performs async policy installation */
++	KERNEL_POLICY_ASYNC = (1<<7),
+ };
+ 
+ /**
+@@ -170,6 +174,16 @@
+ 							  uint32_t if_id_in, uint32_t if_id_out);
+ 
+ 	/**
++	 * Wait for the IPsec backend to complete the install/update/delete
++	 * of SAs and policies associated to reqid.
++	 *
++	 * @param reqid		reqid of the SAs and policies to wait for
++	 * @return		SUCCESS if SAs/policies for reqid are ready
++	 */
++	status_t (*wait_for_reqid)(kernel_interface_t *this, uint32_t reqid);
++
++	/**
++	 *
+ 	 * Add an SA to the SAD.
+ 	 *
+ 	 * This function does install a single SA for a single protocol in one
+--- a/src/libcharon/sa/child_sa.c
++++ b/src/libcharon/sa/child_sa.c
+@@ -1016,6 +1016,26 @@
+ 	enumerator->destroy(enumerator);
+ }
+ 
++METHOD(child_sa_t, wait_for_kernel, status_t,
++	   private_child_sa_t *this)
++{
++
++	kernel_feature_t f;
++	f = charon->kernel->get_features(charon->kernel);
++
++	if (!(f & KERNEL_POLICY_ASYNC) && !(f & KERNEL_SA_ASYNC))
++	{
++		return SUCCESS;
++	}
++
++	if (!this->reqid_allocated)
++	{
++		return SUCCESS;
++	}
++
++	return charon->kernel->wait_for_reqid(charon->kernel, this->reqid);
++}
++
+ /**
+  * Install inbound policies: in, fwd
+  */
+@@ -1668,6 +1688,9 @@
+ 		}
+ 	}
+ 
++	/* handle async IPsec backends */
++	this->public.wait_for_kernel((struct child_sa_t *) this);
++
+ 	if (!transport_proxy_mode)
+ 	{
+ 		/* apply hosts */
+@@ -1756,6 +1779,9 @@
+ 		charon->kernel->del_sa(charon->kernel, &id, &sa);
+ 	}
+ 
++	/* handle async IPsec backends */
++	this->public.wait_for_kernel((struct child_sa_t *) this);
++
+ 	if (this->reqid_allocated)
+ 	{
+ 		if (charon->kernel->release_reqid(charon->kernel,
+@@ -1861,6 +1887,7 @@
+ 			.update = _update,
+ 			.set_policies = _set_policies,
+ 			.install_policies = _install_policies,
++			.wait_for_kernel = _wait_for_kernel,
+ 			.create_ts_enumerator = _create_ts_enumerator,
+ 			.create_policy_enumerator = _create_policy_enumerator,
+ 			.destroy = _destroy,
+--- a/src/libcharon/sa/child_sa.h
++++ b/src/libcharon/sa/child_sa.h
+@@ -481,6 +481,13 @@
+ 	status_t (*install_policies)(child_sa_t *this);
+ 
+ 	/**
++	 * Wait for IPsec backend to complete the SA and policy installation.
++	 *
++	 * @return			SUCCESS or FAILED
++	 */
++	status_t (*wait_for_kernel)(child_sa_t *this);
++
++	/**
+ 	 * Set the outbound SPI of the CHILD_SA that replaced this CHILD_SA during
+ 	 * a rekeying.
+ 	 *
+--- a/src/libcharon/sa/ikev1/tasks/quick_mode.c
++++ b/src/libcharon/sa/ikev1/tasks/quick_mode.c
+@@ -378,6 +378,14 @@
+ 		return FALSE;
+ 	}
+ 
++	/* handle async IPsec backends */
++	status = this->child_sa->wait_for_kernel(this->child_sa);
++	if (status != SUCCESS)
++	{
++		DBG1(DBG_IKE, "unable to install IPsec SA and policies in kernel");
++		return FALSE;
++	}
++
+ 	charon->bus->child_keys(charon->bus, this->child_sa, this->initiator,
+ 							this->dh, this->nonce_i, this->nonce_r);
+ 
+--- a/src/libcharon/sa/ikev2/tasks/child_create.c
++++ b/src/libcharon/sa/ikev2/tasks/child_create.c
+@@ -813,6 +813,13 @@
+ 		return status;
+ 	}
+ 
++	status = this->child_sa->wait_for_kernel(this->child_sa);
++	if (status != SUCCESS)
++	{
++		DBG1(DBG_IKE, "unable to install IPsec SA and policies in kernel");
++		return status;
++	}
++
+ 	charon->bus->child_keys(charon->bus, this->child_sa, this->initiator,
+ 							this->dh, nonce_i, nonce_r);
+ 
+--- a/src/libcharon/sa/ikev2/tasks/child_delete.c
++++ b/src/libcharon/sa/ikev2/tasks/child_delete.c
+@@ -345,6 +345,10 @@
+ 			 * immediately destroy it, by default, so we can process delayed
+ 			 * packets */
+ 			child_sa->remove_outbound(child_sa);
++
++			/* handle async IPsec backends */
++			child_sa->wait_for_kernel(child_sa);
++
+ 			expire = child_sa->get_lifetime(child_sa, TRUE);
+ 			if (delay && (!expire || ((now + delay) < expire)))
+ 			{
+--- a/src/libcharon/sa/trap_manager.c
++++ b/src/libcharon/sa/trap_manager.c
+@@ -324,6 +324,14 @@
+ 	child_sa->set_mode(child_sa, child->get_mode(child));
+ 	child_sa->set_policies(child_sa, my_ts, other_ts);
+ 	status = child_sa->install_policies(child_sa);
++	if (status == SUCCESS)
++	{
++		status = child_sa->wait_for_kernel(child_sa);
++		if (status != SUCCESS)
++		{
++			DBG1(DBG_CFG, "async installation of trap failed");
++		}
++	}
+ 	my_ts->destroy_offset(my_ts, offsetof(traffic_selector_t, destroy));
+ 	other_ts->destroy_offset(other_ts, offsetof(traffic_selector_t, destroy));
+ 	if (status != SUCCESS)
+--- a/src/libcharon/kernel/kernel_ipsec.h
++++ b/src/libcharon/kernel/kernel_ipsec.h
+@@ -359,6 +359,15 @@
+ 	bool (*enable_udp_decap)(kernel_ipsec_t *this, int fd, int family,
+ 							 uint16_t port);
+ 
++
++	/**
++	 * Wait for the IPsec backend to complete async operations.
++	 *
++	 * @param reqid			reqid of mapping waiting for
++	 * @return				SUCCESS if operation completed
++	 */
++	status_t (*wait_for_reqid)(kernel_ipsec_t *this, uint32_t reqid);
++
+ 	/**
+ 	 * Destroy the implementation.
+ 	 */
