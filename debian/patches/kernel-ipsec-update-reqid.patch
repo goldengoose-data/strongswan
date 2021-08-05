@@ -1,0 +1,29 @@
+--- a/src/libcharon/kernel/kernel_ipsec.h
++++ b/src/libcharon/kernel/kernel_ipsec.h
+@@ -119,6 +119,8 @@
+  * Data required to update the hosts of an SA in the kernel
+  */
+ struct kernel_ipsec_update_sa_t {
++	/** Reqid */
++	uint32_t reqid;
+ 	/** CPI in case IPComp is used */
+ 	uint16_t cpi;
+ 	/** New source address */
+--- a/src/libcharon/sa/child_sa.c
++++ b/src/libcharon/sa/child_sa.c
+@@ -1527,6 +1527,7 @@
+ 			.if_id = this->if_id_in,
+ 		};
+ 		kernel_ipsec_update_sa_t sa = {
++			.reqid = this->reqid,
+ 			.cpi = this->ipcomp != IPCOMP_NONE ? this->my_cpi : 0,
+ 			.new_src = other,
+ 			.new_dst = me,
+@@ -1552,6 +1553,7 @@
+ 			.if_id = this->if_id_out,
+ 		};
+ 		kernel_ipsec_update_sa_t sa = {
++			.reqid = this->reqid,
+ 			.cpi = this->ipcomp != IPCOMP_NONE ? this->other_cpi : 0,
+ 			.new_src = me,
+ 			.new_dst = other,
