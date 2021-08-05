@@ -1,0 +1,35 @@
+--- a/src/libcharon/kernel/kernel_ipsec.h
++++ b/src/libcharon/kernel/kernel_ipsec.h
+@@ -137,6 +137,8 @@
+  * Data required to query an SA in the kernel
+  */
+ struct kernel_ipsec_query_sa_t {
++	/** Reqid */
++	uint32_t reqid;
+ 	uint16_t cpi;
+ };
+ 
+--- a/src/libcharon/sa/child_sa.c
++++ b/src/libcharon/sa/child_sa.c
+@@ -552,7 +552,9 @@
+ 				.if_id = this->if_id_in,
+ 				.domain = this->config->get_domain(this->config),
+ 			};
+-			kernel_ipsec_query_sa_t query = {};
++			kernel_ipsec_query_sa_t query = {
++				.reqid = this->reqid,
++			};
+ 
+ 			status = charon->kernel->query_sa(charon->kernel, &id, &query,
+ 											  &bytes, &packets, &time);
+@@ -587,7 +589,9 @@
+ 				.if_id = this->if_id_out,
+ 				.domain = this->config->get_domain(this->config),
+ 			};
+-			kernel_ipsec_query_sa_t query = {};
++			kernel_ipsec_query_sa_t query = {
++				.reqid = this->reqid,
++			};
+ 
+ 			status = charon->kernel->query_sa(charon->kernel, &id, &query,
+ 											  &bytes, &packets, &time);

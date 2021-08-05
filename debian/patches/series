@@ -53,3 +53,4 @@ load-tester-ecdsa.patch
 child-sa-kernel-async-install.patch
 kernel-ipsec-delete-reqid.patch
 kernel-ipsec-update-reqid.patch
+kernel-ipsec-query-reqid.patch
