@@ -1,0 +1,159 @@
+--- a/src/libcharon/bus/bus.c
++++ b/src/libcharon/bus/bus.c
+@@ -268,6 +268,15 @@
+ 	}
+ }
+ 
++static inline bool skip_updown(ike_sa_t *ike_sa)
++{
++	ike_cfg_t *ike_cfg = ike_sa->get_ike_cfg(ike_sa);
++	if (ike_cfg->skip_updown(ike_cfg))
++		return TRUE;
++
++	return FALSE;
++}
++
+ METHOD(bus_t, add_logger, void,
+ 	private_bus_t *this, logger_t *logger)
+ {
+@@ -709,6 +718,10 @@
+ 	bool keep;
+ 
+ 	ike_sa = this->thread_sa->get(this->thread_sa);
++	if (skip_updown(ike_sa))
++	{
++		return;
++	}
+ 
+ 	this->mutex->lock(this->mutex);
+ 	enumerator = this->listeners->create_enumerator(this->listeners);
+@@ -800,6 +813,11 @@
+ 	entry_t *entry;
+ 	bool keep;
+ 
++	if (skip_updown(ike_sa))
++	{
++		return;
++	}
++
+ 	this->mutex->lock(this->mutex);
+ 	enumerator = this->listeners->create_enumerator(this->listeners);
+ 	while (enumerator->enumerate(enumerator, &entry))
+--- a/src/libcharon/config/ike_cfg.c
++++ b/src/libcharon/config/ike_cfg.c
+@@ -116,6 +116,11 @@
+ 	childless_t childless;
+ 
+ 	/**
++	 * skip raising updown events
++	 */
++	bool skip_updown;
++
++	/**
+ 	 * DSCP value to use on sent IKE packets
+ 	 */
+ 	uint8_t dscp;
+@@ -156,6 +161,12 @@
+ 	return this->childless;
+ }
+ 
++METHOD(ike_cfg_t, skip_updown, bool,
++	private_ike_cfg_t *this)
++{
++	return this->skip_updown;
++}
++
+ /**
+  * Common function for resolve_me/other
+  */
+@@ -401,6 +412,7 @@
+ 		this->force_encap == other->force_encap &&
+ 		this->fragmentation == other->fragmentation &&
+ 		this->childless == other->childless &&
++		this->skip_updown == other->skip_updown &&
+ 		streq(this->me, other->me) &&
+ 		streq(this->other, other->other) &&
+ 		streq(this->source_interface, other->source_interface) &&
+@@ -605,6 +617,7 @@
+ 			.force_encap = _force_encap_,
+ 			.fragmentation = _fragmentation,
+ 			.childless = _childless,
++			.skip_updown = _skip_updown,
+ 			.resolve_me = _resolve_me,
+ 			.resolve_other = _resolve_other,
+ 			.match_me = _match_me,
+@@ -631,6 +644,7 @@
+ 		.source_interface = data->source_interface,
+ 		.fragmentation = data->fragmentation,
+ 		.childless = data->childless,
++		.skip_updown = data->skip_updown,
+ 		.me = strdup(data->local),
+ 		.my_ranges = linked_list_create(),
+ 		.my_hosts = linked_list_create(),
+--- a/src/libcharon/config/ike_cfg.h
++++ b/src/libcharon/config/ike_cfg.h
+@@ -237,6 +237,13 @@
+ 	childless_t (*childless)(ike_cfg_t *this);
+ 
+ 	/**
++	 * Whether to skip raising IKE/Child SA updown events
++	 *
++	 * @return				TRUE to not raise updown events
++	 */
++	bool (*skip_updown)(ike_cfg_t *this);
++
++	/**
+ 	 * Get the DH group to use for IKE_SA setup.
+ 	 *
+ 	 * @return				dh group to use for initialization
+@@ -298,6 +305,8 @@
+ 	childless_t childless;
+ 	/** DSCP value to send IKE packets with */
+ 	uint8_t dscp;
++	/** Skip raising updown events */
++	bool skip_updown;
+ };
+ 
+ /**
+--- a/src/libcharon/plugins/vici/vici_config.c
++++ b/src/libcharon/plugins/vici/vici_config.c
+@@ -332,6 +332,7 @@
+ 	uint32_t if_id_out;
+ 	char *install_virtual_ip_on;
+ 	char *source_interface;
++	bool skip_updown;
+ #ifdef ME
+ 	bool mediation;
+ 	char *mediated_by;
+@@ -430,6 +431,7 @@
+ 	DBG2(DBG_CFG, "  dpd_timeout = %llu", data->dpd_timeout);
+ 	DBG2(DBG_CFG, "  fragmentation = %u",  data->fragmentation);
+ 	DBG2(DBG_CFG, "  childless = %u",  data->childless);
++	DBG2(DBG_CFG, "  skip_updown = %u",  data->skip_updown);
+ 	DBG2(DBG_CFG, "  unique = %N", unique_policy_names, data->unique);
+ 	DBG2(DBG_CFG, "  keyingtries = %u", data->keyingtries);
+ 	DBG2(DBG_CFG, "  reauth_time = %llu", data->reauth_time);
+@@ -457,6 +459,7 @@
+ 	}
+ 
+ 
++
+ 	if (data->vips->get_count(data->vips))
+ 	{
+ 		DBG2(DBG_CFG, "  vips:");
+@@ -1852,6 +1855,7 @@
+ 		{ "if_id_out",		parse_if_id,		&peer->if_id_out			},
+ 		{ "install_virtual_ip_on",	parse_string,			&peer->install_virtual_ip_on			},
+ 		{ "source_interface",		parse_string,			&peer->source_interface			},
++		{ "skip_updown",		parse_bool,			&peer->skip_updown		},
+ #ifdef ME
+ 		{ "mediation",		parse_bool,			&peer->mediation			},
+ 		{ "mediated_by",	parse_string,		&peer->mediated_by			},
+@@ -2583,6 +2587,7 @@
+ 		.source_interface = NULL,
+ 		.childless = peer.childless,
+ 		.dscp = peer.dscp,
++		.skip_updown = peer.skip_updown,
+ 	};
+ 	ike_cfg = ike_cfg_create(&ike);
+ 
