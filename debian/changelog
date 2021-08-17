@@ -1,3 +1,13 @@
+strongswan (5.9.0-0danos10) unstable; urgency=medium
+
+  * child-sa: introduce wait_for_kernel/reqid
+  * kernel-ipsec: pass reqid as argument to del_sa kernel calls
+  * kernel-ipsec: pass reqid as argument to update_sa kernel calls
+  * kernel-ipsec: pass reqid as argument to query_sa kernel calls
+  * vici: introduce conn.skip_updown=<bool> option
+
+ -- Daniel Gollub <dgollub@att.com>  Tue, 17 Aug 2021 11:08:21 +0200
+
 strongswan (5.9.0-0danos9) unstable; urgency=medium
 
   * load-tester: allow to configure delay in microseconds
