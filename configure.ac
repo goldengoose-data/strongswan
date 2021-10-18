@@ -19,7 +19,7 @@
 #  initialize & set some vars
 # ============================
 
-AC_INIT([strongSwan],[5.9.1])
+AC_INIT([strongSwan],[5.9.4])
 AM_INIT_AUTOMAKE(m4_esyscmd([
 	echo tar-ustar
 	echo subdir-objects
@@ -216,7 +216,7 @@ ARG_ENABL_SET([ext-auth],       [enable plugin calling an external authorization
 ARG_ENABL_SET([ipseckey],       [enable IPSECKEY authentication plugin.])
 ARG_ENABL_SET([keychain],       [enables OS X Keychain Services credential set.])
 ARG_ENABL_SET([pkcs11],         [enables the PKCS11 token support plugin.])
-ARG_ENABL_SET([tpm],            [enables the TPM plugin.])
+ARG_ENABL_SET([tpm],            [enables the TPM plugin to access private keys and certificates bound to a TPM 2.0.])
 ARG_DISBL_SET([revocation],     [disable X509 CRL/OCSP revocation check plugin.])
 ARG_ENABL_SET([whitelist],      [enable peer identity whitelisting plugin.])
 ARG_DISBL_SET([xauth-generic],  [disable generic XAuth backend.])
@@ -498,6 +498,10 @@ fi
 
 if test x$aikgen = xtrue; then
 	tss_trousers=true
+fi
+
+if test x$tpm = xtrue; then
+	tss_tss2=true
 fi
 
 if test x$gmp = xtrue -o x$ntru = xtrue -o x$bliss = xtrue; then
@@ -1060,7 +1064,7 @@ if test x$tss_tss2 = xtrue; then
 	fi
 fi
 
-if test x$imc_swima = xtrue -o $imv_swima = xtrue; then
+if test x$imc_swima = xtrue -o x$imv_swima = xtrue; then
 	PKG_CHECK_MODULES(json, [json-c], [],
 		[PKG_CHECK_MODULES(json, [json])])
 	AC_SUBST(json_CFLAGS)
@@ -1173,9 +1177,14 @@ if test x$gcrypt = xtrue; then
 fi
 
 if test x$botan = xtrue; then
-	PKG_CHECK_MODULES(botan, [botan-2])
+	PKG_CHECK_MODULES(botan, [botan-3], [],
+		[PKG_CHECK_MODULES(botan, [botan-2])])
 	AC_SUBST(botan_CFLAGS)
 	AC_SUBST(botan_LIBS)
+	saved_LIBS=$LIBS
+	LIBS="$botan_LIBS"
+	AC_CHECK_FUNCS(botan_rng_init_custom)
+	LIBS=$saved_LIBS
 fi
 
 if test x$uci = xtrue; then
@@ -1266,6 +1275,11 @@ if test x$bfd_backtraces = xtrue; then
 	AC_CHECK_LIB([bfd],[bfd_init],[LIBS="$LIBS"],[AC_MSG_ERROR([binutils libbfd not found!])],[])
 	AC_CHECK_HEADER([bfd.h],[AC_DEFINE([HAVE_BFD_H],,[have binutils bfd.h])],
 		[AC_MSG_ERROR([binutils bfd.h header not found!])])
+	AC_CHECK_DECLS(
+		[bfd_section_flags, bfd_get_section_flags,
+		 bfd_section_vma, bfd_get_section_vma,
+		 bfd_section_size, bfd_get_section_size], [], [],
+		[[#include <bfd.h>]])
 	BFDLIB="-lbfd"
 	AC_SUBST(BFDLIB)
 fi
