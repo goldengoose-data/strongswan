@@ -6,6 +6,9 @@ dont-load-kernel-libipsec-plugin-by-default.patch
 
 # Upstream patches
 
+# security patches
+strongswan-4.4.1-5.9.3_cert-cache-random.patch
+
 # hashlist revert, to maintain original behavior
 0008-hashtable-Use-quadratic-probing.patch
 0007-vici-Store-configs-in-a-hashtable.patch
