@@ -4,6 +4,11 @@
 04_disable-libtls-tests.patch
 05_is_known_vip.patch
 
+# Upstream patches
+
+# security patches
+strongswan-4.4.1-5.9.3_cert-cache-random.patch
+
 0001-task-manager-v1-Add-utility-function-to-check-if-CHI.patch
 0002-ikev1-Don-t-trigger-updown-event-and-close-action-fo.patch
 ikev1_rekey_check_before_installing_as_responder.patch
