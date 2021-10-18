@@ -169,10 +169,6 @@ DNS server assigned to peer via configuration payload (CP).
 Enable Denial of Service protection using cookies and aggressiveness checks.
 
 .TP
-.BR charon.ecp_x_coordinate_only " [yes]"
-Compliance with the errata for RFC 4753.
-
-.TP
 .B charon.filelog
 .br
 Section to define file loggers, see LOGGER CONFIGURATION in
@@ -512,6 +508,12 @@ Enable logging of SQL IP pool leases.
 .TP
 .BR charon.plugins.bliss.use_bliss_b " [yes]"
 Use the enhanced BLISS\-B key generation and signature algorithm.
+
+.TP
+.BR charon.plugins.botan.internal_rng_only " [no]"
+If enabled, only Botan's internal RNG will be used throughout the plugin.
+Otherwise, and if supported by Botan, rng_t implementations provided by other
+loaded plugins will be used as RNG.
 
 .TP
 .BR charon.plugins.bypass-lan.interfaces_ignore " []"
@@ -2093,6 +2095,10 @@ might be used as indicator on the number of reserved threads.
 List of TLS encryption ciphers.
 
 .TP
+.BR charon.tls.ke_group " []"
+List of TLS key exchange groups.
+
+.TP
 .BR charon.tls.key_exchange " []"
 List of TLS key exchange methods.
 
@@ -2101,8 +2107,25 @@ List of TLS key exchange methods.
 List of TLS MAC algorithms.
 
 .TP
+.BR charon.tls.send_certreq_authorities " [yes]"
+Whether to include CAs in a server's CertificateRequest message. May be disabled
+if clients can't handle a long list of CAs.
+
+.TP
+.BR charon.tls.signature " []"
+List of TLS signature schemes.
+
+.TP
 .BR charon.tls.suites " []"
 List of TLS cipher suites.
+
+.TP
+.BR charon.tls.version_max " [1.2]"
+Maximum TLS version to negotiate.
+
+.TP
+.BR charon.tls.version_min " [1.2]"
+Minimum TLS version to negotiate.
 
 .TP
 .BR charon.tnc.tnc_config " [/etc/tnc_config]"
@@ -2222,6 +2245,10 @@ Dummy measurement value extended into PCR17 if the TBOOT log is not available.
 .TP
 .BR libimcv.plugins.imc-attestation.pcr_info " [no]"
 Whether to send pcr_before and pcr_after info.
+
+.TP
+.BR libimcv.plugins.imc-attestation.pcr_padding " [no]"
+Whether to pad IMA SHA1 measurements values when extending into SHA256 PCR bank.
 
 .TP
 .BR libimcv.plugins.imc-attestation.use_quote2 " [yes]"

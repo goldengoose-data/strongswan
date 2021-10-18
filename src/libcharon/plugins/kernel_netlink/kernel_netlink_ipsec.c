@@ -242,8 +242,11 @@ static kernel_algorithm_t integrity_algs[] = {
 	{AUTH_HMAC_SHA1_160,		"hmac(sha1)"		},
 	{AUTH_HMAC_SHA2_256_96,		"sha256"			},
 	{AUTH_HMAC_SHA2_256_128,	"hmac(sha256)"		},
+	{AUTH_HMAC_SHA2_256_256,	"hmac(sha256)"		},
 	{AUTH_HMAC_SHA2_384_192,	"hmac(sha384)"		},
+	{AUTH_HMAC_SHA2_384_384,	"hmac(sha384)"		},
 	{AUTH_HMAC_SHA2_512_256,	"hmac(sha512)"		},
+	{AUTH_HMAC_SHA2_512_512,	"hmac(sha512)"		},
 /*	{AUTH_DES_MAC,				"***"				}, */
 /*	{AUTH_KPDK_MD5,				"***"				}, */
 	{AUTH_AES_XCBC_96,			"xcbc(aes)"			},
@@ -1320,7 +1323,7 @@ static void netlink_find_offload_feature(const char *ifname)
 {
 	struct ethtool_sset_info *sset_info;
 	struct ethtool_gstrings *cmd = NULL;
-	struct ifreq ifr;
+	struct ifreq ifr = { 0 };
 	uint32_t sset_len, i;
 	char *str;
 	int err, query_socket;
@@ -1389,7 +1392,7 @@ static bool netlink_detect_offload(const char *ifname)
 {
 	struct ethtool_gfeatures *cmd;
 	uint32_t feature_bit;
-	struct ifreq ifr;
+	struct ifreq ifr = { 0 };
 	int query_socket;
 	int block;
 	bool ret = FALSE;
@@ -1763,6 +1766,15 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 			case AUTH_HMAC_SHA1_160:
 				trunc_len = 160;
 				break;
+			case AUTH_HMAC_SHA2_256_256:
+				trunc_len = 256;
+				break;
+			case AUTH_HMAC_SHA2_384_384:
+				trunc_len = 384;
+				break;
+			case AUTH_HMAC_SHA2_512_512:
+				trunc_len = 512;
+				break;
 			default:
 				break;
 		}
@@ -1773,7 +1785,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
 
 			/* the kernel uses SHA256 with 96 bit truncation by default,
 			 * use specified truncation size supported by newer kernels.
-			 * also use this for untruncated MD5 and SHA1. */
+			 * also use this for untruncated MD5, SHA1 and SHA2. */
 			algo = netlink_reserve(hdr, sizeof(request), XFRMA_ALG_AUTH_TRUNC,
 								   sizeof(*algo) + data->int_key.len);
 			if (!algo)
