@@ -1,3 +1,19 @@
+strongswan (5.9.4-1) UNRELEASED; urgency=medium
+
+  [ Paride Legovini ]
+  * tpm plugin: compile against the tpm2 software stack (tss2)
+    (Closes: #994396, Ubuntu#1940079)
+
+  [ Yves-Alexis Perez ]
+  * New upstream version 5.9.4
+  * d/patches rebased against new upstream
+  * Enable forecast plugin (Closes: #943457)
+  * update lintian overrides for new lintian
+  * d/control: update standards version to 4.6.0
+  * d/s-starter.postrm: use which to check for command existence
+
+ -- Yves-Alexis Perez <corsac@debian.org>  Tue, 19 Oct 2021 22:34:08 +0200
+
 strongswan (5.9.1-1) unstable; urgency=medium
 
   * New upstream version 5.9.1
