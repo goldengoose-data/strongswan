@@ -1,3 +1,9 @@
+strongswan (5.9.0-0danos11) unstable; urgency=medium
+
+  * cert-cache: Prevent crash due to integer overflow/sign change
+
+ -- Daniel Gollub <dgollub@att.com>  Thu, 21 Oct 2021 19:39:30 +0200
+
 strongswan (5.9.0-0danos10) unstable; urgency=medium
 
   * child-sa: introduce wait_for_kernel/reqid
