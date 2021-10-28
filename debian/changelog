@@ -1,3 +1,9 @@
+strongswan (5.9.0-0danos12) unstable; urgency=medium
+
+  * Revert "child-sa: introduce wait_for_kernel/reqid"
+
+ -- Daniel Gollub <dgollub@att.com>  Thu, 28 Oct 2021 11:21:24 +0200
+
 strongswan (5.9.0-0danos11) unstable; urgency=medium
 
   * cert-cache: Prevent crash due to integer overflow/sign change
