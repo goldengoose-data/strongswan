@@ -450,14 +450,6 @@ WINS servers assigned to peer via configuration payload (CP).
 WINS servers assigned to peer via configuration payload (CP).
 
 .TP
-.BR charon.plugin.ha.buflen " [2048]"
-Buffer size for received HA messages. For IKEv1 the public DH factors are also
-transmitted so depending on the DH group the HA messages can get quite big (the
-default should be fine up to
-.RI "" "modp4096" ")."
-
-
-.TP
 .BR charon.plugins.addrblock.strict " [yes]"
 If set to yes, a subject certificate without an addrblock extension is rejected
 if the issuer certificate has such an addrblock extension. If set to no, subject
@@ -1010,6 +1002,14 @@ Interval in seconds to automatically balance handled segments between nodes. Set
 to 0 to disable.
 
 .TP
+.BR charon.plugins.ha.buflen " [2048]"
+Buffer size for received HA messages. For IKEv1 the public DH factors are also
+transmitted so depending on the DH group the HA messages can get quite big (the
+default should be fine up to
+.RI "" "modp4096" ")."
+
+
+.TP
 .BR charon.plugins.ha.fifo_interface " [yes]"
 .TP
 .BR charon.plugins.ha.heartbeat_delay " [1000]"
@@ -1196,6 +1196,10 @@ traffic selector is located, the external interface is the one over which the
 destination address of the IPsec tunnel can be reached. This is not relevant if
 virtual IPs are used, for which a TUN device is created that's used in the
 routes.
+
+.TP
+.BR charon.plugins.kernel-pfroute.mtu " [1400]"
+MTU to set on TUN devices created for virtual IPs.
 
 .TP
 .BR charon.plugins.kernel-pfroute.vip_wait " [1000]"
@@ -1409,7 +1413,19 @@ ENGINE ID to use in the OpenSSL plugin.
 
 .TP
 .BR charon.plugins.openssl.fips_mode " [0]"
-Set OpenSSL FIPS mode: disabled(0), enabled(1), Suite B enabled(2).
+Set OpenSSL FIPS mode.  With OpenSSL before 3.0, the supported values are
+disabled(0), enabled(1) and Suite B enabled(2).  With OpenSSL 3+, any value
+other than 0 will explicitly load the fips and base providers 
+.RI "(" "load_legacy" ""
+will be ignored). The latter still requires the config in fipsmodule.cnf (e.g.
+for the module's MAC), but allows explicitly loading the provider if it's not
+activated in that config.
+
+.TP
+.BR charon.plugins.openssl.load_legacy " [yes]"
+Load the legacy provider in OpenSSL 3+ for algorithms like MD4, DES, or Blowfish
+(the first two are required for EAP\-MSCHAPv2). If disabled, the default provider
+is loaded, or those configured in the OpenSSL config (e.g. the fips provider).
 
 .TP
 .BR charon.plugins.osx-attr.append " [yes]"
@@ -1736,6 +1752,11 @@ Send an unsupported PB\-TNC message type with the NOSKIP flag set.
 Send a PB\-TNC batch with a modified PB\-TNC version.
 
 .TP
+.BR charon.plugins.tpm.ek_handle " []"
+Handle of the RSA or ECC Endorsement Key (EK) to be used to set up an
+authenticated session with a TPM 2.0 (e.g. 0x81010001).
+
+.TP
 .BR charon.plugins.tpm.fips_186_4 " [no]"
 Is the TPM 2.0 FIPS\-186\-4 compliant, forcing e.g. the use of the default salt
 length instead of maximum salt length with RSAPSS padding.
@@ -1768,7 +1789,10 @@ and no options otherwise.
 
 .TP
 .BR charon.plugins.tpm.use_rng " [no]"
-Whether the TPM should be used as RNG.
+Whether the TPM should be used as RNG. For security reasons enable only if an
+authenticated session can be set up (see
+.RI "" "ek_handle" ""
+option).
 
 .TP
 .BR charon.plugins.unbound.dlv_anchors " []"

@@ -372,9 +372,11 @@ am__libstrongswan_la_SOURCES_DIST = library.c asn1/asn1.c \
 	credentials/sets/callback_cred.c credentials/auth_cfg.c \
 	database/database.c database/database_factory.c \
 	fetcher/fetcher.c fetcher/fetcher_manager.c eap/eap.c \
-	ipsec/ipsec_types.c networking/host.c \
-	networking/host_resolver.c networking/packet.c \
-	networking/tun_device.c networking/streams/stream_manager.c \
+	ipsec/ipsec_types.c metadata/metadata_factory.c \
+	metadata/metadata_int.c metadata/metadata_set.c \
+	networking/host.c networking/host_resolver.c \
+	networking/packet.c networking/tun_device.c \
+	networking/streams/stream_manager.c \
 	networking/streams/stream.c \
 	networking/streams/stream_service.c \
 	networking/streams/stream_tcp.c \
@@ -464,9 +466,11 @@ am_libstrongswan_la_OBJECTS = library.lo asn1/asn1.lo \
 	credentials/sets/callback_cred.lo credentials/auth_cfg.lo \
 	database/database.lo database/database_factory.lo \
 	fetcher/fetcher.lo fetcher/fetcher_manager.lo eap/eap.lo \
-	ipsec/ipsec_types.lo networking/host.lo \
-	networking/host_resolver.lo networking/packet.lo \
-	networking/tun_device.lo networking/streams/stream_manager.lo \
+	ipsec/ipsec_types.lo metadata/metadata_factory.lo \
+	metadata/metadata_int.lo metadata/metadata_set.lo \
+	networking/host.lo networking/host_resolver.lo \
+	networking/packet.lo networking/tun_device.lo \
+	networking/streams/stream_manager.lo \
 	networking/streams/stream.lo \
 	networking/streams/stream_service.lo \
 	networking/streams/stream_tcp.lo \
@@ -566,7 +570,11 @@ am__depfiles_remade = ./$(DEPDIR)/library.Plo asn1/$(DEPDIR)/asn1.Plo \
 	database/$(DEPDIR)/database_factory.Plo eap/$(DEPDIR)/eap.Plo \
 	fetcher/$(DEPDIR)/fetcher.Plo \
 	fetcher/$(DEPDIR)/fetcher_manager.Plo \
-	ipsec/$(DEPDIR)/ipsec_types.Plo networking/$(DEPDIR)/host.Plo \
+	ipsec/$(DEPDIR)/ipsec_types.Plo \
+	metadata/$(DEPDIR)/metadata_factory.Plo \
+	metadata/$(DEPDIR)/metadata_int.Plo \
+	metadata/$(DEPDIR)/metadata_set.Plo \
+	networking/$(DEPDIR)/host.Plo \
 	networking/$(DEPDIR)/host_resolver.Plo \
 	networking/$(DEPDIR)/packet.Plo \
 	networking/$(DEPDIR)/tun_device.Plo \
@@ -717,7 +725,9 @@ am__nobase_strongswan_include_HEADERS_DIST = library.h asn1/asn1.h \
 	credentials/credential_set.h credentials/cert_validator.h \
 	database/database.h database/database_factory.h \
 	fetcher/fetcher.h fetcher/fetcher_manager.h eap/eap.h \
-	pen/pen.h ipsec/ipsec_types.h networking/host.h \
+	pen/pen.h ipsec/ipsec_types.h metadata/metadata.h \
+	metadata/metadata_factory.h metadata/metadata_int.h \
+	metadata/metadata_set.h networking/host.h \
 	networking/host_resolver.h networking/packet.h \
 	networking/tun_device.h networking/streams/stream.h \
 	networking/streams/stream_unix.h \
@@ -1109,9 +1119,11 @@ libstrongswan_la_SOURCES = library.c asn1/asn1.c asn1/asn1_parser.c \
 	credentials/sets/callback_cred.c credentials/auth_cfg.c \
 	database/database.c database/database_factory.c \
 	fetcher/fetcher.c fetcher/fetcher_manager.c eap/eap.c \
-	ipsec/ipsec_types.c networking/host.c \
-	networking/host_resolver.c networking/packet.c \
-	networking/tun_device.c networking/streams/stream_manager.c \
+	ipsec/ipsec_types.c metadata/metadata_factory.c \
+	metadata/metadata_int.c metadata/metadata_set.c \
+	networking/host.c networking/host_resolver.c \
+	networking/packet.c networking/tun_device.c \
+	networking/streams/stream_manager.c \
 	networking/streams/stream.c \
 	networking/streams/stream_service.c \
 	networking/streams/stream_tcp.c \
@@ -1173,6 +1185,8 @@ settings/settings_types.h
 @USE_DEV_HEADERS_TRUE@credentials/auth_cfg.h credentials/credential_set.h credentials/cert_validator.h \
 @USE_DEV_HEADERS_TRUE@database/database.h database/database_factory.h fetcher/fetcher.h \
 @USE_DEV_HEADERS_TRUE@fetcher/fetcher_manager.h eap/eap.h pen/pen.h ipsec/ipsec_types.h \
+@USE_DEV_HEADERS_TRUE@metadata/metadata.h metadata/metadata_factory.h metadata/metadata_int.h \
+@USE_DEV_HEADERS_TRUE@metadata/metadata_set.h \
 @USE_DEV_HEADERS_TRUE@networking/host.h networking/host_resolver.h networking/packet.h \
 @USE_DEV_HEADERS_TRUE@networking/tun_device.h networking/streams/stream.h \
 @USE_DEV_HEADERS_TRUE@networking/streams/stream_unix.h networking/streams/stream_service_unix.h \
@@ -1657,6 +1671,18 @@ ipsec/$(DEPDIR)/$(am__dirstamp):
 	@: > ipsec/$(DEPDIR)/$(am__dirstamp)
 ipsec/ipsec_types.lo: ipsec/$(am__dirstamp) \
 	ipsec/$(DEPDIR)/$(am__dirstamp)
+metadata/$(am__dirstamp):
+	@$(MKDIR_P) metadata
+	@: > metadata/$(am__dirstamp)
+metadata/$(DEPDIR)/$(am__dirstamp):
+	@$(MKDIR_P) metadata/$(DEPDIR)
+	@: > metadata/$(DEPDIR)/$(am__dirstamp)
+metadata/metadata_factory.lo: metadata/$(am__dirstamp) \
+	metadata/$(DEPDIR)/$(am__dirstamp)
+metadata/metadata_int.lo: metadata/$(am__dirstamp) \
+	metadata/$(DEPDIR)/$(am__dirstamp)
+metadata/metadata_set.lo: metadata/$(am__dirstamp) \
+	metadata/$(DEPDIR)/$(am__dirstamp)
 networking/$(am__dirstamp):
 	@$(MKDIR_P) networking
 	@: > networking/$(am__dirstamp)
@@ -1936,6 +1962,8 @@ mostlyclean-compile:
 	-rm -f fetcher/*.lo
 	-rm -f ipsec/*.$(OBJEXT)
 	-rm -f ipsec/*.lo
+	-rm -f metadata/*.$(OBJEXT)
+	-rm -f metadata/*.lo
 	-rm -f networking/*.$(OBJEXT)
 	-rm -f networking/*.lo
 	-rm -f networking/streams/*.$(OBJEXT)
@@ -2035,6 +2063,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@fetcher/$(DEPDIR)/fetcher.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@fetcher/$(DEPDIR)/fetcher_manager.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@ipsec/$(DEPDIR)/ipsec_types.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@metadata/$(DEPDIR)/metadata_factory.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@metadata/$(DEPDIR)/metadata_int.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@metadata/$(DEPDIR)/metadata_set.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@networking/$(DEPDIR)/host.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@networking/$(DEPDIR)/host_resolver.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@networking/$(DEPDIR)/packet.Plo@am__quote@ # am--include-marker
@@ -2166,6 +2197,7 @@ clean-libtool:
 	-rm -rf eap/.libs eap/_libs
 	-rm -rf fetcher/.libs fetcher/_libs
 	-rm -rf ipsec/.libs ipsec/_libs
+	-rm -rf metadata/.libs metadata/_libs
 	-rm -rf networking/.libs networking/_libs
 	-rm -rf networking/streams/.libs networking/streams/_libs
 	-rm -rf pen/.libs pen/_libs
@@ -2444,6 +2476,8 @@ distclean-generic:
 	-rm -f fetcher/$(am__dirstamp)
 	-rm -f ipsec/$(DEPDIR)/$(am__dirstamp)
 	-rm -f ipsec/$(am__dirstamp)
+	-rm -f metadata/$(DEPDIR)/$(am__dirstamp)
+	-rm -f metadata/$(am__dirstamp)
 	-rm -f networking/$(DEPDIR)/$(am__dirstamp)
 	-rm -f networking/$(am__dirstamp)
 	-rm -f networking/streams/$(DEPDIR)/$(am__dirstamp)
@@ -2554,6 +2588,9 @@ distclean: distclean-recursive
 	-rm -f fetcher/$(DEPDIR)/fetcher.Plo
 	-rm -f fetcher/$(DEPDIR)/fetcher_manager.Plo
 	-rm -f ipsec/$(DEPDIR)/ipsec_types.Plo
+	-rm -f metadata/$(DEPDIR)/metadata_factory.Plo
+	-rm -f metadata/$(DEPDIR)/metadata_int.Plo
+	-rm -f metadata/$(DEPDIR)/metadata_set.Plo
 	-rm -f networking/$(DEPDIR)/host.Plo
 	-rm -f networking/$(DEPDIR)/host_resolver.Plo
 	-rm -f networking/$(DEPDIR)/packet.Plo
@@ -2732,6 +2769,9 @@ maintainer-clean: maintainer-clean-recursive
 	-rm -f fetcher/$(DEPDIR)/fetcher.Plo
 	-rm -f fetcher/$(DEPDIR)/fetcher_manager.Plo
 	-rm -f ipsec/$(DEPDIR)/ipsec_types.Plo
+	-rm -f metadata/$(DEPDIR)/metadata_factory.Plo
+	-rm -f metadata/$(DEPDIR)/metadata_int.Plo
+	-rm -f metadata/$(DEPDIR)/metadata_set.Plo
 	-rm -f networking/$(DEPDIR)/host.Plo
 	-rm -f networking/$(DEPDIR)/host_resolver.Plo
 	-rm -f networking/$(DEPDIR)/packet.Plo
