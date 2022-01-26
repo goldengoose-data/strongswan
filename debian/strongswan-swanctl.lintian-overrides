@@ -6,5 +6,4 @@ strongswan-swanctl: non-standard-dir-perm etc/swanctl/private/ 0700 != 0755
 strongswan-swanctl: non-standard-dir-perm etc/swanctl/rsa/ 0700 != 0755
 # strongswan libraries are installed in /usr/lib/ipsec because they are private
 # to the strongSwan project. We still want to split multiple binaries from the lib
-custom-library-search-path usr/lib/ipsec/libvici.so.0.0.0 RUNPATH usr/lib/ipsec/
-custom-library-search-path usr/sbin/swanctl RUNPATH usr/lib/ipsec/
+custom-library-search-path RUNPATH /usr/lib/ipsec
