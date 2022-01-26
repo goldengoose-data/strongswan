@@ -1,11 +1,11 @@
-strongswan (5.9.5-1) UNRELEASED; urgency=medium
+strongswan (5.9.5-1) unstable; urgency=medium
 
   * New upstream version 5.9.5
     - eap-authenticator: Enforce failure if MSK generation fails
       Fix incorrect handling of Early EAP-Success Messages (CVE-2021-45079)
   * update lintian overrides to match RUNPATH
 
- -- Yves-Alexis Perez <corsac@debian.org>  Wed, 26 Jan 2022 14:38:37 +0100
+ -- Yves-Alexis Perez <corsac@debian.org>  Wed, 26 Jan 2022 14:38:54 +0100
 
 strongswan (5.9.4-1) unstable; urgency=medium
 
