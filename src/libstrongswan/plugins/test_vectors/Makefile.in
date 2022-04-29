@@ -147,8 +147,9 @@ am_libstrongswan_test_vectors_la_OBJECTS = test_vectors_plugin.lo \
 	test_vectors/chacha20_xof.lo test_vectors/blowfish.lo \
 	test_vectors/camellia_cbc.lo test_vectors/camellia_ctr.lo \
 	test_vectors/camellia_xcbc.lo test_vectors/cast.lo \
-	test_vectors/des.lo test_vectors/idea.lo test_vectors/null.lo \
-	test_vectors/rc2.lo test_vectors/rc5.lo \
+	test_vectors/des.lo test_vectors/idea.lo \
+	test_vectors/kdf_prf.lo test_vectors/kdf_prf_plus.lo \
+	test_vectors/null.lo test_vectors/rc2.lo test_vectors/rc5.lo \
 	test_vectors/serpent_cbc.lo test_vectors/twofish_cbc.lo \
 	test_vectors/md2.lo test_vectors/md4.lo test_vectors/md5.lo \
 	test_vectors/md5_hmac.lo test_vectors/sha1.lo \
@@ -213,8 +214,11 @@ am__depfiles_remade = ./$(DEPDIR)/test_vectors_plugin.Plo \
 	test_vectors/$(DEPDIR)/ecp.Plo \
 	test_vectors/$(DEPDIR)/ecpbp.Plo \
 	test_vectors/$(DEPDIR)/fips_prf.Plo \
-	test_vectors/$(DEPDIR)/idea.Plo test_vectors/$(DEPDIR)/md2.Plo \
-	test_vectors/$(DEPDIR)/md4.Plo test_vectors/$(DEPDIR)/md5.Plo \
+	test_vectors/$(DEPDIR)/idea.Plo \
+	test_vectors/$(DEPDIR)/kdf_prf.Plo \
+	test_vectors/$(DEPDIR)/kdf_prf_plus.Plo \
+	test_vectors/$(DEPDIR)/md2.Plo test_vectors/$(DEPDIR)/md4.Plo \
+	test_vectors/$(DEPDIR)/md5.Plo \
 	test_vectors/$(DEPDIR)/md5_hmac.Plo \
 	test_vectors/$(DEPDIR)/modp.Plo \
 	test_vectors/$(DEPDIR)/modpsub.Plo \
@@ -485,6 +489,8 @@ s_plugins = @s_plugins@
 sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
+selinux_CFLAGS = @selinux_CFLAGS@
+selinux_LIBS = @selinux_LIBS@
 sharedstatedir = @sharedstatedir@
 soup_CFLAGS = @soup_CFLAGS@
 soup_LIBS = @soup_LIBS@
@@ -549,6 +555,8 @@ libstrongswan_test_vectors_la_SOURCES = \
 	test_vectors/cast.c \
 	test_vectors/des.c \
 	test_vectors/idea.c \
+	test_vectors/kdf_prf.c \
+	test_vectors/kdf_prf_plus.c \
 	test_vectors/null.c \
 	test_vectors/rc2.c \
 	test_vectors/rc5.c \
@@ -697,6 +705,10 @@ test_vectors/des.lo: test_vectors/$(am__dirstamp) \
 	test_vectors/$(DEPDIR)/$(am__dirstamp)
 test_vectors/idea.lo: test_vectors/$(am__dirstamp) \
 	test_vectors/$(DEPDIR)/$(am__dirstamp)
+test_vectors/kdf_prf.lo: test_vectors/$(am__dirstamp) \
+	test_vectors/$(DEPDIR)/$(am__dirstamp)
+test_vectors/kdf_prf_plus.lo: test_vectors/$(am__dirstamp) \
+	test_vectors/$(DEPDIR)/$(am__dirstamp)
 test_vectors/null.lo: test_vectors/$(am__dirstamp) \
 	test_vectors/$(DEPDIR)/$(am__dirstamp)
 test_vectors/rc2.lo: test_vectors/$(am__dirstamp) \
@@ -785,6 +797,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@test_vectors/$(DEPDIR)/ecpbp.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@test_vectors/$(DEPDIR)/fips_prf.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@test_vectors/$(DEPDIR)/idea.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@test_vectors/$(DEPDIR)/kdf_prf.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@test_vectors/$(DEPDIR)/kdf_prf_plus.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@test_vectors/$(DEPDIR)/md2.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@test_vectors/$(DEPDIR)/md4.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@test_vectors/$(DEPDIR)/md5.Plo@am__quote@ # am--include-marker
@@ -997,6 +1011,8 @@ distclean: distclean-am
 	-rm -f test_vectors/$(DEPDIR)/ecpbp.Plo
 	-rm -f test_vectors/$(DEPDIR)/fips_prf.Plo
 	-rm -f test_vectors/$(DEPDIR)/idea.Plo
+	-rm -f test_vectors/$(DEPDIR)/kdf_prf.Plo
+	-rm -f test_vectors/$(DEPDIR)/kdf_prf_plus.Plo
 	-rm -f test_vectors/$(DEPDIR)/md2.Plo
 	-rm -f test_vectors/$(DEPDIR)/md4.Plo
 	-rm -f test_vectors/$(DEPDIR)/md5.Plo
@@ -1086,6 +1102,8 @@ maintainer-clean: maintainer-clean-am
 	-rm -f test_vectors/$(DEPDIR)/ecpbp.Plo
 	-rm -f test_vectors/$(DEPDIR)/fips_prf.Plo
 	-rm -f test_vectors/$(DEPDIR)/idea.Plo
+	-rm -f test_vectors/$(DEPDIR)/kdf_prf.Plo
+	-rm -f test_vectors/$(DEPDIR)/kdf_prf_plus.Plo
 	-rm -f test_vectors/$(DEPDIR)/md2.Plo
 	-rm -f test_vectors/$(DEPDIR)/md4.Plo
 	-rm -f test_vectors/$(DEPDIR)/md5.Plo

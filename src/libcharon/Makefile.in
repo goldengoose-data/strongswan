@@ -299,10 +299,12 @@ host_triplet = @host@
 @MONOLITHIC_TRUE@@USE_RESOLVE_TRUE@am__append_149 = plugins/resolve/libstrongswan-resolve.la
 @USE_ATTR_TRUE@am__append_150 = plugins/attr
 @MONOLITHIC_TRUE@@USE_ATTR_TRUE@am__append_151 = plugins/attr/libstrongswan-attr.la
-@USE_ATTR_SQL_TRUE@am__append_152 = plugins/attr_sql
-@MONOLITHIC_TRUE@@USE_ATTR_SQL_TRUE@am__append_153 = plugins/attr_sql/libstrongswan-attr-sql.la
-@MONOLITHIC_TRUE@@USE_TPM_TRUE@am__append_154 = $(top_builddir)/src/libtpmtss/libtpmtss.la
-@USE_EAP_AKA_3GPP_TRUE@am__append_155 = plugins/eap_aka_3gpp/tests
+@USE_SELINUX_TRUE@am__append_152 = plugins/selinux
+@MONOLITHIC_TRUE@@USE_SELINUX_TRUE@am__append_153 = plugins/selinux/libstrongswan-selinux.la
+@USE_ATTR_SQL_TRUE@am__append_154 = plugins/attr_sql
+@MONOLITHIC_TRUE@@USE_ATTR_SQL_TRUE@am__append_155 = plugins/attr_sql/libstrongswan-attr-sql.la
+@MONOLITHIC_TRUE@@USE_TPM_TRUE@am__append_156 = $(top_builddir)/src/libtpmtss/libtpmtss.la
+@USE_EAP_AKA_3GPP_TRUE@am__append_157 = plugins/eap_aka_3gpp/tests
 subdir = src/libcharon
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/config/libtool.m4 \
@@ -381,7 +383,8 @@ libcharon_la_DEPENDENCIES =  \
 	$(am__append_133) $(am__append_135) $(am__append_137) \
 	$(am__append_139) $(am__append_141) $(am__append_143) \
 	$(am__append_145) $(am__append_147) $(am__append_149) \
-	$(am__append_151) $(am__append_153) $(am__append_154)
+	$(am__append_151) $(am__append_153) $(am__append_155) \
+	$(am__append_156)
 am__libcharon_la_SOURCES_DIST = attributes/attributes.c \
 	attributes/attributes.h attributes/attribute_provider.h \
 	attributes/attribute_handler.h attributes/attribute_manager.c \
@@ -892,7 +895,8 @@ DIST_SUBDIRS = . plugins/load_tester plugins/save_keys \
 	plugins/coupling plugins/radattr plugins/uci plugins/addrblock \
 	plugins/unity plugins/xauth_generic plugins/xauth_eap \
 	plugins/xauth_pam plugins/xauth_noauth plugins/resolve \
-	plugins/attr plugins/attr_sql tests plugins/eap_aka_3gpp/tests
+	plugins/attr plugins/selinux plugins/attr_sql tests \
+	plugins/eap_aka_3gpp/tests
 am__DIST_COMMON = $(srcdir)/Makefile.in $(top_srcdir)/depcomp
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 am__relativize = \
@@ -1130,6 +1134,8 @@ s_plugins = @s_plugins@
 sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
+selinux_CFLAGS = @selinux_CFLAGS@
+selinux_LIBS = @selinux_LIBS@
 sharedstatedir = @sharedstatedir@
 soup_CFLAGS = @soup_CFLAGS@
 soup_LIBS = @soup_LIBS@
@@ -1312,7 +1318,7 @@ libcharon_la_LIBADD =  \
 	$(am__append_135) $(am__append_137) $(am__append_139) \
 	$(am__append_141) $(am__append_143) $(am__append_145) \
 	$(am__append_147) $(am__append_149) $(am__append_151) \
-	$(am__append_153) $(am__append_154)
+	$(am__append_153) $(am__append_155) $(am__append_156)
 EXTRA_DIST = Android.mk
 @STATIC_PLUGIN_CONSTRUCTORS_TRUE@BUILT_SOURCES = $(srcdir)/plugin_constructors.c
 @STATIC_PLUGIN_CONSTRUCTORS_TRUE@CLEANFILES = $(srcdir)/plugin_constructors.c
@@ -1354,8 +1360,8 @@ EXTRA_DIST = Android.mk
 @MONOLITHIC_FALSE@	$(am__append_138) $(am__append_140) \
 @MONOLITHIC_FALSE@	$(am__append_142) $(am__append_144) \
 @MONOLITHIC_FALSE@	$(am__append_146) $(am__append_148) \
-@MONOLITHIC_FALSE@	$(am__append_150) $(am__append_152) tests \
-@MONOLITHIC_FALSE@	$(am__append_155)
+@MONOLITHIC_FALSE@	$(am__append_150) $(am__append_152) \
+@MONOLITHIC_FALSE@	$(am__append_154) tests $(am__append_157)
 
 # build optional plugins
 ########################
@@ -1397,8 +1403,8 @@ EXTRA_DIST = Android.mk
 @MONOLITHIC_TRUE@	$(am__append_138) $(am__append_140) \
 @MONOLITHIC_TRUE@	$(am__append_142) $(am__append_144) \
 @MONOLITHIC_TRUE@	$(am__append_146) $(am__append_148) \
-@MONOLITHIC_TRUE@	$(am__append_150) $(am__append_152) . tests \
-@MONOLITHIC_TRUE@	$(am__append_155)
+@MONOLITHIC_TRUE@	$(am__append_150) $(am__append_152) \
+@MONOLITHIC_TRUE@	$(am__append_154) . tests $(am__append_157)
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
 

@@ -140,13 +140,14 @@ LTLIBRARIES = $(noinst_LTLIBRARIES) $(plugin_LTLIBRARIES)
 am__DEPENDENCIES_1 =
 libstrongswan_openssl_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
 am_libstrongswan_openssl_la_OBJECTS = openssl_plugin.lo \
-	openssl_util.lo openssl_crypter.lo openssl_hasher.lo \
-	openssl_sha1_prf.lo openssl_diffie_hellman.lo \
-	openssl_rsa_private_key.lo openssl_rsa_public_key.lo \
-	openssl_ec_diffie_hellman.lo openssl_ec_private_key.lo \
-	openssl_ec_public_key.lo openssl_x509.lo openssl_crl.lo \
-	openssl_pkcs7.lo openssl_pkcs12.lo openssl_rng.lo \
-	openssl_hmac.lo openssl_aead.lo openssl_x_diffie_hellman.lo \
+	openssl_util.lo openssl_crypter.lo openssl_engine.lo \
+	openssl_hasher.lo openssl_sha1_prf.lo \
+	openssl_diffie_hellman.lo openssl_rsa_private_key.lo \
+	openssl_rsa_public_key.lo openssl_ec_diffie_hellman.lo \
+	openssl_ec_private_key.lo openssl_ec_public_key.lo \
+	openssl_x509.lo openssl_crl.lo openssl_pkcs7.lo \
+	openssl_pkcs12.lo openssl_rng.lo openssl_hmac.lo \
+	openssl_kdf.lo openssl_aead.lo openssl_x_diffie_hellman.lo \
 	openssl_ed_private_key.lo openssl_ed_public_key.lo \
 	openssl_xof.lo
 libstrongswan_openssl_la_OBJECTS =  \
@@ -185,7 +186,8 @@ am__depfiles_remade = ./$(DEPDIR)/openssl_aead.Plo \
 	./$(DEPDIR)/openssl_ec_public_key.Plo \
 	./$(DEPDIR)/openssl_ed_private_key.Plo \
 	./$(DEPDIR)/openssl_ed_public_key.Plo \
-	./$(DEPDIR)/openssl_hasher.Plo ./$(DEPDIR)/openssl_hmac.Plo \
+	./$(DEPDIR)/openssl_engine.Plo ./$(DEPDIR)/openssl_hasher.Plo \
+	./$(DEPDIR)/openssl_hmac.Plo ./$(DEPDIR)/openssl_kdf.Plo \
 	./$(DEPDIR)/openssl_pkcs12.Plo ./$(DEPDIR)/openssl_pkcs7.Plo \
 	./$(DEPDIR)/openssl_plugin.Plo ./$(DEPDIR)/openssl_rng.Plo \
 	./$(DEPDIR)/openssl_rsa_private_key.Plo \
@@ -451,6 +453,8 @@ s_plugins = @s_plugins@
 sbindir = @sbindir@
 scepclient_plugins = @scepclient_plugins@
 scripts_plugins = @scripts_plugins@
+selinux_CFLAGS = @selinux_CFLAGS@
+selinux_LIBS = @selinux_LIBS@
 sharedstatedir = @sharedstatedir@
 soup_CFLAGS = @soup_CFLAGS@
 soup_LIBS = @soup_LIBS@
@@ -498,6 +502,7 @@ libstrongswan_openssl_la_SOURCES = \
 	openssl_plugin.h openssl_plugin.c \
 	openssl_util.c openssl_util.h \
 	openssl_crypter.c openssl_crypter.h \
+	openssl_engine.c openssl_engine.h \
 	openssl_hasher.c openssl_hasher.h \
 	openssl_sha1_prf.c openssl_sha1_prf.h \
 	openssl_diffie_hellman.c openssl_diffie_hellman.h \
@@ -512,6 +517,7 @@ libstrongswan_openssl_la_SOURCES = \
 	openssl_pkcs12.c openssl_pkcs12.h \
 	openssl_rng.c openssl_rng.h \
 	openssl_hmac.c openssl_hmac.h \
+	openssl_kdf.c openssl_kdf.h \
 	openssl_aead.c openssl_aead.h \
 	openssl_x_diffie_hellman.c openssl_x_diffie_hellman.h \
 	openssl_ed_private_key.c openssl_ed_private_key.h \
@@ -618,8 +624,10 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/openssl_ec_public_key.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/openssl_ed_private_key.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/openssl_ed_public_key.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/openssl_engine.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/openssl_hasher.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/openssl_hmac.Plo@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/openssl_kdf.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/openssl_pkcs12.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/openssl_pkcs7.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/openssl_plugin.Plo@am__quote@ # am--include-marker
@@ -805,8 +813,10 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/openssl_ec_public_key.Plo
 	-rm -f ./$(DEPDIR)/openssl_ed_private_key.Plo
 	-rm -f ./$(DEPDIR)/openssl_ed_public_key.Plo
+	-rm -f ./$(DEPDIR)/openssl_engine.Plo
 	-rm -f ./$(DEPDIR)/openssl_hasher.Plo
 	-rm -f ./$(DEPDIR)/openssl_hmac.Plo
+	-rm -f ./$(DEPDIR)/openssl_kdf.Plo
 	-rm -f ./$(DEPDIR)/openssl_pkcs12.Plo
 	-rm -f ./$(DEPDIR)/openssl_pkcs7.Plo
 	-rm -f ./$(DEPDIR)/openssl_plugin.Plo
@@ -872,8 +882,10 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/openssl_ec_public_key.Plo
 	-rm -f ./$(DEPDIR)/openssl_ed_private_key.Plo
 	-rm -f ./$(DEPDIR)/openssl_ed_public_key.Plo
+	-rm -f ./$(DEPDIR)/openssl_engine.Plo
 	-rm -f ./$(DEPDIR)/openssl_hasher.Plo
 	-rm -f ./$(DEPDIR)/openssl_hmac.Plo
+	-rm -f ./$(DEPDIR)/openssl_kdf.Plo
 	-rm -f ./$(DEPDIR)/openssl_pkcs12.Plo
 	-rm -f ./$(DEPDIR)/openssl_pkcs7.Plo
 	-rm -f ./$(DEPDIR)/openssl_plugin.Plo
