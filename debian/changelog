@@ -1,10 +1,10 @@
-strongswan (5.9.6-1) UNRELEASED; urgency=medium
+strongswan (5.9.6-1) unstable; urgency=medium
 
   * New upstream version 5.9.6
   * d/p/0006-fix-format-string-issue-in-enum_flags_to_string added
   * d/libstrongswan.install: install kdf plugin in libstrongswan
 
- -- Yves-Alexis Perez <corsac@debian.org>  Sat, 07 May 2022 20:19:07 +0200
+ -- Yves-Alexis Perez <corsac@debian.org>  Sat, 07 May 2022 20:19:18 +0200
 
 strongswan (5.9.5-2) unstable; urgency=medium
 
