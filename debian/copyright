@@ -2429,11 +2429,6 @@ Copyright: 2013-2015, Andreas Steffen
   2010-2013, Martin Willi, revosec AG
 License: GPL-2+
 
-Files: src/scepclient/*
-Copyright: 2012, Tobias Brunner
-  2005, Jan Hutter, Martin Willi
-License: GPL-2+
-
 Files: src/starter/*
 Copyright: 2001, 2002, Mathieu Lafon - Arkoon Network Security
 License: GPL-2+
