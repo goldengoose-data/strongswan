@@ -65,12 +65,6 @@ Copyright: 2013, revosec aG
   2013, Martin Willi
 License: GPL-2+
 
-Files: src/_copyright/*
-Copyright: 2001, Henry Spencer
-  , reporter
-  , 1999-2013"
-License: GPL-2+
-
 Files: src/aikgen/*
 Copyright: 2014, Andreas Steffen
   2008, Hal Finney
