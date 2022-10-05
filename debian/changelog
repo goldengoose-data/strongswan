@@ -1,3 +1,19 @@
+strongswan (5.9.8-1) UNRELEASED; urgency=medium
+
+  * New upstream version 5.9.8
+    - Includes fix for  CVE-2022-40617, denial of service due to the
+    revocation plugin potentially using untrusted OCSP URIs and CRL
+    distribution points in CRLs. (closes: #1021271)
+  * Remove strongswan-scepclient package, replaced by a pki(1) command
+  * d/p/0006-fix-format-string-issue-in-enum_flags_to_string dropped, included
+    upstream
+  * remove dropped _copyright utility
+  * d/strongswan-pki.install: install est/estca manpages (RFC 7070)
+  * d/s-{started,swanctl}.lintian-overrides updated for new lintian
+  * d/copyright updated for new upstream release
+
+ -- Yves-Alexis Perez <corsac@debian.org>  Wed, 05 Oct 2022 15:23:29 +0200
+
 strongswan (5.9.6-1) unstable; urgency=medium
 
   * New upstream version 5.9.6
