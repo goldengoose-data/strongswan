@@ -1384,14 +1384,6 @@ Copyright: 2010-2015, revosec AG
   2006-2015, Martin Willi
 License: GPL-2+
 
-Files: src/libstrongswan/crypto/diffie_hellman.c
-  src/libstrongswan/crypto/diffie_hellman.h
-  src/libstrongswan/crypto/mac.h
-Copyright: 2007-2015, Tobias Brunner
-  2005-2011, Martin Willi
-  2005, Jan Hutter
-License: GPL-2+
-
 Files: src/libstrongswan/crypto/hashers/*
 Copyright: 2007-2015, Tobias Brunner
   2005, Jan Hutter
