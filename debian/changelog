@@ -1,8 +1,8 @@
-strongswan (5.9.8-2) UNRELEASED; urgency=medium
+strongswan (5.9.8-2) unstable; urgency=medium
 
   * d/tests: remove scepclient tests since it's gone (Closes: #1023224)
 
- -- Yves-Alexis Perez <corsac@debian.org>  Thu, 03 Nov 2022 13:05:15 +0100
+ -- Yves-Alexis Perez <corsac@debian.org>  Thu, 03 Nov 2022 13:05:27 +0100
 
 strongswan (5.9.8-1) unstable; urgency=medium
 
