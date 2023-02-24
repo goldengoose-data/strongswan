@@ -209,7 +209,7 @@ Architecture: any
 Pre-Depends: ${misc:Pre-Depends}
 Depends: adduser,
          libstrongswan (= ${binary:Version}),
-         lsb-base (>= 3.0-6),
+         sysvinit-utils (>= 3.05-3),
          ${misc:Depends},
          ${shlibs:Depends}
 Recommends: strongswan-charon
