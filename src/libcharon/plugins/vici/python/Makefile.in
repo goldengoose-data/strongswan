@@ -371,7 +371,6 @@ sharedstatedir = @sharedstatedir@
 soup_CFLAGS = @soup_CFLAGS@
 soup_LIBS = @soup_LIBS@
 srcdir = @srcdir@
-starter_plugins = @starter_plugins@
 strongswan_conf = @strongswan_conf@
 strongswan_options = @strongswan_options@
 swanctldir = @swanctldir@
@@ -409,9 +408,9 @@ EXTRA_DIST = LICENSE README.rst MANIFEST.in \
 	tox.sh \
 	test/__init__.py \
 	test/test_protocol.py \
+	test/test_session.py \
 	vici/__init__.py \
 	vici/command_wrappers.py \
-	vici/compat.py \
 	vici/exception.py \
 	vici/protocol.py \
 	vici/session.py
