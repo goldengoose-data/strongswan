@@ -60,9 +60,9 @@ single peer IP.
 Whether Certificate Revocation Lists (CRLs) fetched via HTTP or LDAP should be
 saved under a unique file name derived from the public key of the Certification
 Authority (CA) to
-.RB "" "/etc/ipsec.d/crls" ""
+.RB "" "${sysconfdir}/ipsec.d/crls" ""
 (stroke) or
-.RB "" "/etc/swanctl/x509crl" ""
+.RB "" "${sysconfdir}/swanctl/x509crl" ""
 (vici), respectively.
 
 .TP
@@ -596,6 +596,13 @@ Maximum number of redirects followed by the plugin, set to 0 to disable
 following redirects, set to \-1 for no limit.
 
 .TP
+.BR charon.plugins.curl.tls_backend " []"
+The SSL/TLS backend to configure in curl if multiple are available (requires
+libcurl 7.56 or newer). A list of available options is logged on level 2 if
+nothing is configured. Similar but on level 1 if the selected backend isn't
+available.
+
+.TP
 .BR charon.plugins.dhcp.force_server_address " [no]"
 Always use the configured server address. This might be helpful if the DHCP
 server runs on the same host as strongSwan, and the DHCP daemon does not listen
@@ -693,7 +700,8 @@ Phase2 EAP client authentication method.
 
 .TP
 .BR charon.plugins.eap-peap.phase2_piggyback " [no]"
-Phase2 EAP Identity request piggybacked by server onto TLS Finished message.
+Phase2 EAP Identity request piggybacked by server onto TLS Finished message,
+relevant only if TLS 1.2 or earlier is negotiated.
 
 .TP
 .BR charon.plugins.eap-peap.phase2_tnc " [no]"
@@ -712,7 +720,7 @@ Send RADIUS accounting information to RADIUS servers.
 Close the IKE_SA if there is a timeout during interim RADIUS accounting updates.
 
 .TP
-.BR charon.plugins.eap-radius.accounting_interval " [0]"
+.BR charon.plugins.eap-radius.accounting_interval " [0s]"
 Interval in seconds for interim RADIUS accounting updates, if not specified by
 the RADIUS server in the Access\-Accept message.
 
@@ -1096,6 +1104,18 @@ interface for offload feature detection.
 .TP
 .BR charon.plugins.kernel-netlink.ignore_retransmit_errors " [no]"
 Whether to ignore errors potentially resulting from a retransmission.
+
+.TP
+.BR charon.plugins.kernel-netlink.install_routes_xfrmi " [no]"
+Whether routes via XFRM interfaces are automatically installed for SAs that
+reference such an interface via
+.RI "" "if_id_out" "."
+If the traffic selectors include
+the IKE traffic to the peer, this requires special care (e.g. installing bypass
+policies and/or routes, or setting a mark on the IKE socket and excluding such
+packets from the configured routing table via
+.RI "" "fwmark" ""
+option).
 
 .TP
 .BR charon.plugins.kernel-netlink.mss " [0]"
@@ -1533,18 +1553,32 @@ File to read pseudo random bytes from.
 
 .TP
 .BR charon.plugins.resolve.file " [/etc/resolv.conf]"
-File where to add DNS server entries.
+File where to add DNS server entries if not using resolvconf(8).
 
 .TP
-.BR charon.plugins.resolve.resolvconf.iface_prefix " [lo.inet.ipsec.]"
-Prefix used for interface names sent to
+.BR charon.plugins.resolve.resolvconf.iface " [lo.ipsec]"
+The interface name and protocol sent to
 .RB "" "resolvconf" "(8)."
-The nameserver
-address is appended to this prefix to make it unique.  The result has to be a
+This has to be a
 valid interface name according to the rules defined by resolvconf.  Also, it
 should have a high priority according to the order defined in
-.RB "" "interface\-order" "(5)."
+.RB "" "interface\-order" "(5)"
+if relevant on the system.
 
+.TP
+.BR charon.plugins.resolve.resolvconf.path " [/sbin/resolvconf]"
+Path/command for
+.RB "" "resolvconf" "(8)."
+The command is executed by a shell, so
+"resolvconf" will work if it's in $PATH of the daemon.
+
+If not configured,
+.RB "" "resolvconf" "(8)"
+will be used if found at the default
+location.  Otherwise, the file in
+.RI "" "charon.plugins.resolve.file" ""
+will be modified
+directly.
 
 .TP
 .BR charon.plugins.revocation.enable_crl " [yes]"
@@ -1833,7 +1867,7 @@ then used as a root trusted DLV, this means that it is a lookaside for the root.
 File to read DNS resolver configuration from.
 
 .TP
-.BR charon.plugins.unbound.trust_anchors " [/etc/ipsec.d/dnssec.keys]"
+.BR charon.plugins.unbound.trust_anchors " [${sysconfdir}/ipsec.d/dnssec.keys]"
 File to read DNSSEC trust anchors from (usually root zone KSK). The format of
 the file is the standard DNS Zone file format, anchors can be stored as DS or
 DNSKEY entries in the file.
@@ -1977,6 +2011,10 @@ Specific IKEv2 message type to delay, 0 for any.
 Size of the AH/ESP replay window, in packets.
 
 .TP
+.BR charon.reqid_base " [1]"
+Value of the first reqid to be automatically assigned to a CHILD_SA.
+
+.TP
 .BR charon.retransmit_base " [1.8]"
 Base to use for calculating exponential back off, see IKEv2 RETRANSMISSION in
 .RB "" "strongswan.conf" "(5)."
@@ -2000,7 +2038,7 @@ Timeout in seconds before sending first retransmit.
 Number of times to retransmit a packet before giving up.
 
 .TP
-.BR charon.retry_initiate_interval " [0]"
+.BR charon.retry_initiate_interval " [0s]"
 Interval in seconds to use when retrying to initiate an IKE_SA (e.g. if DNS
 resolution failed), 0 to disable retries.
 
@@ -2206,6 +2244,10 @@ Discard certificates with unsupported or unknown critical extensions.
 .TP
 .BR charon-nm.ca_dir " [<default>]"
 Directory from which to load CA certificates if no certificate is configured.
+
+.TP
+.BR charon-nm.mtu " [1400]"
+MTU for XFRM interfaces created by the NM plugin.
 
 .TP
 .B charon-systemd.journal

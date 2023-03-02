@@ -403,7 +403,6 @@ sharedstatedir = @sharedstatedir@
 soup_CFLAGS = @soup_CFLAGS@
 soup_LIBS = @soup_LIBS@
 srcdir = @srcdir@
-starter_plugins = @starter_plugins@
 strongswan_conf = @strongswan_conf@
 strongswan_options = @strongswan_options@
 swanctldir = @swanctldir@
@@ -782,9 +781,9 @@ fuzz_pb_tnc: fuzz_pb_tnc.c ${libfuzzer}
 check: all
 	for f in $(FUZZ_TARGETS); do \
 		corpus=$${f#fuzz_}; \
-		./$$f $(FUZZING_CORPORA)/$${corpus}/*; \
+		./$$f $(FUZZING_CORPORA)/$${corpus}/* || exit 1; \
 		crashes=$(FUZZING_CORPORA)/$${corpus}-crash; \
-		test ! -d $${crashes} || ./$$f $${crashes}/*; \
+		test ! -d $${crashes} || ./$$f $${crashes}/* || exit 1; \
 	done
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
