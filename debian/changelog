@@ -1,4 +1,4 @@
-strongswan (5.9.11-1) UNRELEASED; urgency=medium
+strongswan (5.9.11-1) unstable; urgency=medium
 
   * New upstream version 5.9.10
   * d/patches: 0005-libtls-Fix-authentication-bypass-and-expired-pointer
@@ -6,7 +6,7 @@ strongswan (5.9.11-1) UNRELEASED; urgency=medium
   * New upstream version 5.9.11
   * d/patches: rebase against new upstream
 
- -- Yves-Alexis Perez <corsac@debian.org>  Sun, 18 Jun 2023 11:52:59 +0200
+ -- Yves-Alexis Perez <corsac@debian.org>  Sun, 18 Jun 2023 11:53:15 +0200
 
 strongswan (5.9.8-4) unstable; urgency=medium
 
