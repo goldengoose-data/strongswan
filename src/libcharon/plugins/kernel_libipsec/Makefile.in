@@ -140,7 +140,7 @@ libstrongswan_kernel_libipsec_la_DEPENDENCIES =  \
 	$(top_builddir)/src/libipsec/libipsec.la
 am_libstrongswan_kernel_libipsec_la_OBJECTS =  \
 	kernel_libipsec_plugin.lo kernel_libipsec_ipsec.lo \
-	kernel_libipsec_router.lo
+	kernel_libipsec_router.lo kernel_libipsec_esp_handler.lo
 libstrongswan_kernel_libipsec_la_OBJECTS =  \
 	$(am_libstrongswan_kernel_libipsec_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
@@ -169,7 +169,8 @@ am__v_at_1 =
 DEFAULT_INCLUDES = -I.@am__isrc@ -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__maybe_remake_depfiles = depfiles
-am__depfiles_remade = ./$(DEPDIR)/kernel_libipsec_ipsec.Plo \
+am__depfiles_remade = ./$(DEPDIR)/kernel_libipsec_esp_handler.Plo \
+	./$(DEPDIR)/kernel_libipsec_ipsec.Plo \
 	./$(DEPDIR)/kernel_libipsec_plugin.Plo \
 	./$(DEPDIR)/kernel_libipsec_router.Plo
 am__mv = mv -f
@@ -481,7 +482,8 @@ AM_CFLAGS = \
 libstrongswan_kernel_libipsec_la_SOURCES = \
 	kernel_libipsec_plugin.h kernel_libipsec_plugin.c \
 	kernel_libipsec_ipsec.h kernel_libipsec_ipsec.c \
-	kernel_libipsec_router.h kernel_libipsec_router.c
+	kernel_libipsec_router.h kernel_libipsec_router.c \
+	kernel_libipsec_esp_handler.h kernel_libipsec_esp_handler.c
 
 libstrongswan_kernel_libipsec_la_LIBADD = $(top_builddir)/src/libipsec/libipsec.la
 libstrongswan_kernel_libipsec_la_LDFLAGS = -module -avoid-version
@@ -574,6 +576,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kernel_libipsec_esp_handler.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kernel_libipsec_ipsec.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kernel_libipsec_plugin.Plo@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kernel_libipsec_router.Plo@am__quote@ # am--include-marker
@@ -741,7 +744,8 @@ clean-am: clean-generic clean-libtool clean-noinstLTLIBRARIES \
 	clean-pluginLTLIBRARIES mostlyclean-am
 
 distclean: distclean-am
-		-rm -f ./$(DEPDIR)/kernel_libipsec_ipsec.Plo
+		-rm -f ./$(DEPDIR)/kernel_libipsec_esp_handler.Plo
+	-rm -f ./$(DEPDIR)/kernel_libipsec_ipsec.Plo
 	-rm -f ./$(DEPDIR)/kernel_libipsec_plugin.Plo
 	-rm -f ./$(DEPDIR)/kernel_libipsec_router.Plo
 	-rm -f Makefile
@@ -789,7 +793,8 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-		-rm -f ./$(DEPDIR)/kernel_libipsec_ipsec.Plo
+		-rm -f ./$(DEPDIR)/kernel_libipsec_esp_handler.Plo
+	-rm -f ./$(DEPDIR)/kernel_libipsec_ipsec.Plo
 	-rm -f ./$(DEPDIR)/kernel_libipsec_plugin.Plo
 	-rm -f ./$(DEPDIR)/kernel_libipsec_router.Plo
 	-rm -f Makefile

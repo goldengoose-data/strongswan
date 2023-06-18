@@ -88,6 +88,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+@USE_WINDOWS_TRUE@am__append_1 = -lws2_32
 subdir = src/libradius
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/config/libtool.m4 \
@@ -136,8 +137,10 @@ am__uninstall_files_from_dir = { \
   }
 am__installdirs = "$(DESTDIR)$(ipseclibdir)"
 LTLIBRARIES = $(ipseclib_LTLIBRARIES)
+am__DEPENDENCIES_1 =
 libradius_la_DEPENDENCIES =  \
-	$(top_builddir)/src/libstrongswan/libstrongswan.la
+	$(top_builddir)/src/libstrongswan/libstrongswan.la \
+	$(am__DEPENDENCIES_1)
 am_libradius_la_OBJECTS = radius_message.lo radius_socket.lo \
 	radius_client.lo radius_config.lo
 libradius_la_OBJECTS = $(am_libradius_la_OBJECTS)
@@ -466,9 +469,9 @@ AM_LDFLAGS = \
 	-no-undefined
 
 ipseclib_LTLIBRARIES = libradius.la
-libradius_la_LIBADD = \
-	$(top_builddir)/src/libstrongswan/libstrongswan.la -lm
-
+libradius_la_LIBADD =  \
+	$(top_builddir)/src/libstrongswan/libstrongswan.la -lm \
+	$(am__append_1)
 libradius_la_SOURCES = \
 	radius_message.h radius_message.c \
 	radius_socket.h radius_socket.c \
