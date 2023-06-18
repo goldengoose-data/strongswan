@@ -520,7 +520,7 @@ typedef struct {
  */
 static void log_child_data(child_data_t *data, char *name)
 {
-	child_cfg_create_t *cfg = &data->cfg;
+	child_cfg_create_t *cfg DBG_UNUSED = &data->cfg;
 
 #define has_opt(opt) ({ (cfg->options & (opt)) == (opt); })
 	DBG2(DBG_CFG, "  child %s:", name);
@@ -2252,7 +2252,7 @@ static void run_start_action(private_vici_config_t *this, peer_cfg_t *peer_cfg,
 		DBG1(DBG_CFG, "initiating '%s'", child_cfg->get_name(child_cfg));
 		charon->controller->initiate(charon->controller,
 					peer_cfg->get_ref(peer_cfg), child_cfg->get_ref(child_cfg),
-					NULL, NULL, 0, FALSE);
+					NULL, NULL, 0, 0, FALSE);
 	}
 }
 
@@ -2348,7 +2348,7 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 			{
 				DBG1(DBG_CFG, "closing '%s' #%u", name, id);
 				charon->controller->terminate_child(charon->controller,
-													id, NULL, NULL, 0);
+													id, NULL, NULL, 0, 0);
 			}
 			array_destroy(ids);
 		}
@@ -2358,7 +2358,7 @@ static void clear_start_action(private_vici_config_t *this, char *peer_name,
 			{
 				DBG1(DBG_CFG, "closing IKE_SA #%u", id);
 				charon->controller->terminate_ike(charon->controller, id,
-												  FALSE, NULL, NULL, 0);
+												  FALSE, NULL, NULL, 0, 0);
 			}
 			array_destroy(ikeids);
 		}
@@ -2604,8 +2604,8 @@ CALLBACK(config_sn, bool,
 #ifdef ME
 	if (peer.mediation && peer.mediated_by)
 	{
-		DBG1(DBG_CFG, "a mediation connection cannot be a mediated connection "
-			 "at the same time, config discarded");
+		request->reply = create_reply("a mediation connection cannot be a "
+									  "mediated connection at the same time");
 		free_peer_data(&peer);
 		return FALSE;
 	}
@@ -2616,23 +2616,23 @@ CALLBACK(config_sn, bool,
 	else if (peer.mediated_by)
 	{	/* fallback to remote identity of first auth round if peer_id is not
 		 * given explicitly */
-		auth_cfg_t *cfg;
+		auth_data_t *auth;
 
 		if (!peer.peer_id &&
-			peer.remote->get_first(peer.remote, (void**)&cfg) == SUCCESS)
+			peer.remote->get_first(peer.remote, (void**)&auth) == SUCCESS)
 		{
-			peer.peer_id = cfg->get(cfg, AUTH_RULE_IDENTITY);
+			peer.peer_id = auth->cfg->get(auth->cfg, AUTH_RULE_IDENTITY);
 			if (peer.peer_id)
 			{
 				peer.peer_id = peer.peer_id->clone(peer.peer_id);
 			}
-			else
-			{
-				DBG1(DBG_CFG, "mediation peer missing for mediated connection, "
-					 "config discarded");
-				free_peer_data(&peer);
-				return FALSE;
-			}
+		}
+		if (!peer.peer_id)
+		{
+			request->reply = create_reply("mediation peer or remote identity "
+										  "missing for mediated connection");
+			free_peer_data(&peer);
+			return FALSE;
 		}
 	}
 #endif /* ME */

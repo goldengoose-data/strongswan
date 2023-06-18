@@ -1075,6 +1075,15 @@ plugins can be used
 to circumvent that problem.
 
 .TP
+.BR charon.plugins.kernel-libipsec.fwmark " [charon.plugins.socket-default.fwmark]"
+Firewall mark to set on outbound raw ESP packets.
+
+.TP
+.BR charon.plugins.kernel-libipsec.raw_esp " [no]"
+Whether to send and receive ESP packets without UDP encapsulation if supported
+on this platform and no NAT is detected.
+
+.TP
 .BR charon.plugins.kernel-netlink.buflen " [<min(PAGE_SIZE, 8192)>]"
 Buffer size for received Netlink messages.
 
