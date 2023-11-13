@@ -1,9 +1,9 @@
-strongswan (5.9.11-2) UNRELEASED; urgency=medium
+strongswan (5.9.11-2) unstable; urgency=medium
 
   [ Helmut Grohne ]
   * Fix FTBFS when systemd.pc changes systemdsystemunitdir (Closes: #1052718)
 
- -- Yves-Alexis Perez <corsac@debian.org>  Thu, 28 Sep 2023 21:27:43 +0200
+ -- Yves-Alexis Perez <corsac@debian.org>  Mon, 13 Nov 2023 20:22:47 +0100
 
 strongswan (5.9.11-1) unstable; urgency=medium
 
