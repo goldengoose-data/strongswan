@@ -1,3 +1,11 @@
+strongswan (5.9.12-1) UNRELEASED; urgency=medium
+
+  * New upstream version 5.9.12
+    - includes fix for CVE-2023-41913 in charon-tkm
+      Buffer Overflow When Handling DH Public Values
+
+ -- Yves-Alexis Perez <corsac@debian.org>  Mon, 20 Nov 2023 21:33:41 +0100
+
 strongswan (5.9.11-2) unstable; urgency=medium
 
   [ Helmut Grohne ]
