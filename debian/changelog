@@ -3,8 +3,9 @@ strongswan (5.9.12-1) UNRELEASED; urgency=medium
   * New upstream version 5.9.12
     - includes fix for CVE-2023-41913 in charon-tkm
       Buffer Overflow When Handling DH Public Values
+  * d/strongswan-pki.install: install pki --ocsp manpage
 
- -- Yves-Alexis Perez <corsac@debian.org>  Mon, 20 Nov 2023 21:33:41 +0100
+ -- Yves-Alexis Perez <corsac@debian.org>  Mon, 20 Nov 2023 21:50:54 +0100
 
 strongswan (5.9.11-2) unstable; urgency=medium
 
