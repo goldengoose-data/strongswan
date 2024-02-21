@@ -30,7 +30,7 @@ Build-Depends: bison,
                libxml2-dev,
                pkg-config,
                po-debconf,
-               systemd-dev [linux-any],
+               systemd [linux-any],
                tzdata
 Homepage: http://www.strongswan.org
 

@@ -87,8 +87,6 @@ ifeq ($(DEB_HOST_ARCH_OS),kfreebsd)
 		--with-group=wheel
 endif
 
-deb_systemdsystemunitdir = $(shell pkg-config --variable=systemdsystemunitdir systemd | sed s,^/,,)
-
 override_dh_auto_configure:
 	dh_auto_configure -- $(CONFIGUREARGS)
 
@@ -135,9 +133,7 @@ ifeq ($(DEB_HOST_ARCH_OS),linux)
 	dh_install -p libstrongswan-extra-plugins usr/share/strongswan/templates/config/plugins/af-alg.conf
 	dh_install -p libstrongswan-extra-plugins etc/strongswan.d/charon/af-alg.conf
 	# the systemd service file only gets generated on Linux
-	dh_install -p strongswan-starter "$(deb_systemdsystemunitdir)/strongswan-starter.service"
-	dh_link -p strongswan-starter "$(deb_systemdsystemunitdir)/strongswan-starter.service" "$(deb_systemdsystemunitdir)/ipsec.service"
-	dh_install -p charon-systemd "$(deb_systemdsystemunitdir)/strongswan.service"
+	dh_install -p strongswan-starter lib/systemd/system/strongswan-starter.service
 	# XFRM is Linux only
 	dh_install -p strongswan-libcharon usr/lib/ipsec/xfrmi
 endif
