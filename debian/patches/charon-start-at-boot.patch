@@ -1,0 +1,12 @@
+--- a/conf/options/charon.conf
++++ b/conf/options/charon.conf
+@@ -378,7 +378,8 @@
+     # Section containing a list of scripts (name = path) that are executed when
+     # the daemon is started.
+     start-scripts {
+-
++        swanctl-creds = swanctl --load-creds --noprompt
++        swanctl-conns = swanctl --load-conns
+     }
+ 
+     # Section containing a list of scripts (name = path) that are executed when

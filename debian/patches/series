@@ -1,3 +1,4 @@
+charon-start-at-boot.patch
 02_disable-bypass-lan.patch
 03_systemd-service.patch
 04_disable-libtls-tests.patch
