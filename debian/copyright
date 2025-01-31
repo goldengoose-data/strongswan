@@ -1557,10 +1557,6 @@ Copyright: 2010-2015, revosec AG
   2006-2015, Martin Willi
 License: GPL-2+
 
-Files: src/libstrongswan/plugins/bliss/*
-Copyright: 2001-2015, Andreas Steffen
-License: GPL-2+
-
 Files: src/libstrongswan/plugins/bliss/bliss_huffman.c
 Copyright: 2012, 2014, Tobias Brunner
   2006, 2008, 2014, Andreas Steffen
@@ -1698,21 +1694,6 @@ License: GPL-2+
 
 Files: src/libstrongswan/plugins/nonce/*
 Copyright: 2012, Adrian-Ken Rueegsegger
-License: GPL-2+
-
-Files: src/libstrongswan/plugins/ntru/*
-Copyright: 2001-2015, Andreas Steffen
-License: GPL-2+
-
-Files: src/libstrongswan/plugins/ntru/ntru_convert.c
-  src/libstrongswan/plugins/ntru/ntru_convert.h
-  src/libstrongswan/plugins/ntru/ntru_param_set.c
-  src/libstrongswan/plugins/ntru/ntru_param_set.h
-  src/libstrongswan/plugins/ntru/ntru_poly.c
-  src/libstrongswan/plugins/ntru/ntru_private_key.c
-  src/libstrongswan/plugins/ntru/ntru_public_key.c
-Copyright: 2014, Andreas Steffen
-  2009-2013, Security Innovation
 License: GPL-2+
 
 Files: src/libstrongswan/plugins/openssl/*

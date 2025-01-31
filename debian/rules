@@ -206,7 +206,6 @@ endif
 	chmod 600 $(CURDIR)/debian/strongswan-starter/etc/ipsec.secrets
 	chmod 700 -R $(CURDIR)/debian/strongswan-starter/etc/ipsec.d/private/
 	chmod 700 -R $(CURDIR)/debian/strongswan-starter/var/lib/strongswan/
-	chmod 700 -R $(CURDIR)/debian/strongswan-swanctl/etc/swanctl/bliss/
 	chmod 700 -R $(CURDIR)/debian/strongswan-swanctl/etc/swanctl/ecdsa/
 	chmod 700 -R $(CURDIR)/debian/strongswan-swanctl/etc/swanctl/pkcs8/
 	chmod 700 -R $(CURDIR)/debian/strongswan-swanctl/etc/swanctl/private/
