@@ -36,13 +36,13 @@ Homepage: http://www.strongswan.org
 
 Package: strongswan
 Architecture: all
-Depends: strongswan-charon, strongswan-starter, ${misc:Depends}
+Depends: charon-systemd, strongswan-swanctl, ${misc:Depends}
 Description: IPsec VPN solution metapackage
  The strongSwan VPN suite uses the native IPsec stack in the standard Linux
  kernel. It supports both the IKEv1 and IKEv2 protocols.
  .
  This metapackage installs the packages required to maintain IKEv1 and IKEv2
- connections via ipsec.conf or ipsec.secrets.
+ connections via swanctl command and the swanctl.conf configuration.
 
 Package: libstrongswan
 Architecture: any
@@ -253,7 +253,7 @@ Architecture: any
 Pre-Depends: debconf | debconf-2.0
 Depends: iproute2 [linux-any] | iproute [linux-any],
          libstrongswan (= ${binary:Version}),
-         strongswan-starter,
+         strongswan-swanctl,
          ${misc:Depends},
          ${shlibs:Depends}
 Provides: ike-server
