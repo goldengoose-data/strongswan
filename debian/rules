@@ -13,6 +13,7 @@ CONFIGUREARGS := --libdir=/usr/lib --libexecdir=/usr/lib \
 		--enable-cmd \
 		--enable-ctr \
 		--enable-curl \
+		--enable-curve25519 \
 		--enable-eap-aka \
 		--enable-eap-gtc \
 		--enable-eap-identity \
