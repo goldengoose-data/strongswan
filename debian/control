@@ -59,27 +59,18 @@ Description: strongSwan utility and crypto library
  .
  Some default (as specified by the strongSwan projet) plugins are included.
  For libstrongswan (cryptographic backends, URI fetchers and database layers):
-  - aes (AES-128/192/256 cipher software implementation)
   - constraints (X.509 certificate advanced constraint checking)
   - dnskey (Parse RFC 4034 public keys)
   - drbg (NIST SP-800-90A Deterministic Random Bit Generator)
   - fips-prf (PRF specified by FIPS, used by EAP-SIM/AKA algorithms)
-  - gmp (RSA/DH crypto backend based on libgmp)
-  - hmac (HMAC wrapper using various hashers)
-  - md5 (MD5 hasher software implementation)
-  - mgf1 (Mask Generation Functions based on the SHA-1, SHA-256 and SHA-512)
   - nonce (Default nonce generation plugin)
   - pem (PEM encoding/decoding routines)
   - pgp (PGP encoding/decoding routines)
   - pkcs1 (PKCS#1 encoding/decoding routines)
   - pkcs8 (PKCS#8 decoding routines)
-  - pkcs12 (PKCS#12 decoding routines)
   - pubkey (Wrapper to handle raw public keys as trusted certificates)
   - random (RNG reading from /dev/[u]random)
-  - rc2 (RC2 cipher software implementation)
   - revocation (X.509 CRL/OCSP revocation checking)
-  - sha1 (SHA1 hasher software implementation)
-  - sha2 (SHA256/SHA384/SHA512 hasher software implementation)
   - sshkey (SSH key decoding routines)
   - x509 (Advanced X.509 plugin for parsing/generating X.509 certificates/CRLs
     and OCSP messages)
@@ -115,6 +106,8 @@ Architecture: any
 Depends: libstrongswan (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
+Breaks: libstrongswan-standard-plugins (<< 6.0.0-1~)
+Replaces: libstrongswan-standard-plugins (<< 6.0.0-1~)
 Description: strongSwan utility and crypto library (extra plugins)
  The strongSwan VPN suite uses the native IPsec stack in the standard
  Linux kernel. It supports both the IKEv1 and IKEv2 protocols.
@@ -123,6 +116,7 @@ Description: strongSwan utility and crypto library (extra plugins)
  cryptographic library.
  .
  Included plugins are:
+  - aes (AES-128/192/256 cipher software implementation)
   - af-alg [linux] (AF_ALG Linux crypto API interface, provides
     ciphers/hashers/hmac/xcbc)
   - ccm (CCM cipher mode wrapper)
@@ -133,11 +127,19 @@ Description: strongSwan utility and crypto library (extra plugins)
     support for the Ed25519 digital signature algorithm for IKEv2)
   - gcrypt (Crypto backend based on libgcrypt, provides
     RSA/DH/ciphers/hashers/rng)
+  - gmp (RSA/DH crypto backend based on libgmp)
+  - hmac (HMAC wrapper using various hashers)
   - ldap (LDAP fetching plugin based on libldap)
+  - md5 (MD5 hasher software implementation)
+  - mgf1 (Mask Generation Functions based on the SHA-1, SHA-256 and SHA-512)
   - padlock (VIA padlock crypto backend, provides AES128/SHA1)
   - pkcs11 (PKCS#11 smartcard backend)
+  - pkcs12 (PKCS#12 decoding routines)
+  - rc2 (RC2 cipher software implementation)
   - rdrand (High quality / high performance random source using the Intel
     rdrand instruction found on Ivy Bridge processors)
+  - sha1 (SHA1 hasher software implementation)
+  - sha2 (SHA256/SHA384/SHA512 hasher software implementation)
   - test-vectors (Set of test vectors for various algorithms)
  .
  Also included is the libtpmtss library adding support for TPM plugin

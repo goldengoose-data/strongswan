@@ -5,6 +5,7 @@ export DEB_BUILD_MAINT_OPTIONS=hardening=+all
 
 CONFIGUREARGS := --libdir=/usr/lib --libexecdir=/usr/lib \
 		--enable-addrblock \
+		--enable-aes \
 		--enable-agent \
 		--enable-bypass-lan \
 		--enable-ccm \
@@ -27,14 +28,23 @@ CONFIGUREARGS := --libdir=/usr/lib --libexecdir=/usr/lib \
 		--enable-forecast \
 		--enable-gcm \
 		--enable-gcrypt \
+		--enable-gmp \
 		--enable-ha \
+		--enable-hmac \
 		--enable-kernel-libipsec \
 		--enable-ldap \
 		--enable-led \
 		--enable-lookip \
 		--enable-mediation \
+		--enable-md5 \
+		--enable-mgf1 \
 		--enable-openssl \
 		--enable-pkcs11 \
+		--enable-pkcs12 \
+		--enable-rc2 \
+		--enable-sha1 \
+		--enable-sha2 \
+		--enable-stroke \
 		--enable-test-vectors \
 		--enable-tpm \
 		--enable-tss-tss2 \
