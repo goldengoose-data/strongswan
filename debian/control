@@ -49,6 +49,8 @@ Architecture: any
 Depends: ${misc:Depends}, ${shlibs:Depends}
 Recommends: libstrongswan-standard-plugins
 Suggests: libstrongswan-extra-plugins
+Breaks: libstrongswan-standard-plugins (<< 6.0.0-1~)
+Replaces: libstrongswan-standard-plugins (<< 6.0.0-1~)
 Description: strongSwan utility and crypto library
  The strongSwan VPN suite uses the native IPsec stack in the standard
  Linux kernel. It supports both the IKEv1 and IKEv2 protocols.
@@ -64,6 +66,8 @@ Description: strongSwan utility and crypto library
   - drbg (NIST SP-800-90A Deterministic Random Bit Generator)
   - fips-prf (PRF specified by FIPS, used by EAP-SIM/AKA algorithms)
   - nonce (Default nonce generation plugin)
+  - openssl (Crypto backend based on OpenSSL, provides
+    RSA/ECDSA/DH/ECDH/ciphers/hashers/HMAC/X.509/CRL/RNG)
   - pem (PEM encoding/decoding routines)
   - pgp (PGP encoding/decoding routines)
   - pkcs1 (PKCS#1 encoding/decoding routines)
@@ -98,8 +102,6 @@ Description: strongSwan utility and crypto library (standard plugins)
  Included plugins are:
   - agent (RSA/ECDSA private key backend connecting to SSH-Agent)
   - gcm (GCM cipher mode wrapper)
-  - openssl (Crypto backend based on OpenSSL, provides
-    RSA/ECDSA/DH/ECDH/ciphers/hashers/HMAC/X.509/CRL/RNG)
 
 Package: libstrongswan-extra-plugins
 Architecture: any

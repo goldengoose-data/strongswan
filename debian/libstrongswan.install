@@ -6,6 +6,7 @@ usr/lib/ipsec/plugins/libstrongswan-drbg.so
 usr/lib/ipsec/plugins/libstrongswan-fips-prf.so
 usr/lib/ipsec/plugins/libstrongswan-kdf.so
 usr/lib/ipsec/plugins/libstrongswan-nonce.so
+usr/lib/ipsec/plugins/libstrongswan-openssl.so
 usr/lib/ipsec/plugins/libstrongswan-pgp.so
 usr/lib/ipsec/plugins/libstrongswan-pem.so
 usr/lib/ipsec/plugins/libstrongswan-pkcs1.so
@@ -24,6 +25,7 @@ usr/share/strongswan/templates/config/plugins/drbg.conf
 usr/share/strongswan/templates/config/plugins/fips-prf.conf
 usr/share/strongswan/templates/config/plugins/kdf.conf
 usr/share/strongswan/templates/config/plugins/nonce.conf
+usr/share/strongswan/templates/config/plugins/openssl.conf
 usr/share/strongswan/templates/config/plugins/pgp.conf
 usr/share/strongswan/templates/config/plugins/pem.conf
 usr/share/strongswan/templates/config/plugins/pkcs1.conf
@@ -41,6 +43,7 @@ etc/strongswan.d/charon/drbg.conf
 etc/strongswan.d/charon/fips-prf.conf
 etc/strongswan.d/charon/kdf.conf
 etc/strongswan.d/charon/nonce.conf
+etc/strongswan.d/charon/openssl.conf
 etc/strongswan.d/charon/pgp.conf
 etc/strongswan.d/charon/pem.conf
 etc/strongswan.d/charon/pkcs1.conf
