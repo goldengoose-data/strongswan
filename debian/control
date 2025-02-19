@@ -28,7 +28,7 @@ Build-Depends: bison,
                libtool,
                libtss2-dev,
                libxml2-dev,
-               pkg-config,
+               pkgconf,
                po-debconf,
                systemd-dev [linux-any],
                tzdata
