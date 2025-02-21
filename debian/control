@@ -76,7 +76,6 @@ Description: strongSwan utility and crypto library
   - revocation (X.509 CRL/OCSP revocation checking)
   - x509 (Advanced X.509 plugin for parsing/generating X.509 certificates/CRLs
     and OCSP messages)
-  - xcbc (XCBC wrapper using various ciphers)
   - attr (Provides IKE attributes configured in strongswan.conf)
   - kernel-netlink [linux] (IPsec/Networking kernel interface using Linux
     Netlink)
@@ -145,6 +144,7 @@ Description: strongSwan utility and crypto library (extra plugins)
   - sha1 (SHA1 hasher software implementation)
   - sha2 (SHA256/SHA384/SHA512 hasher software implementation)
   - test-vectors (Set of test vectors for various algorithms)
+  - xcbc (XCBC wrapper using various ciphers)
  .
  Also included is the libtpmtss library adding support for TPM plugin
  (https://wiki.strongswan.org/projects/strongswan/wiki/TpmPlugin)

@@ -11,6 +11,7 @@ usr/lib/ipsec/plugins/libstrongswan-curve25519.so
 usr/lib/ipsec/plugins/libstrongswan-gcrypt.so
 usr/lib/ipsec/plugins/libstrongswan-gmp.so
 usr/lib/ipsec/plugins/libstrongswan-hmac.so
+usr/lib/ipsec/plugins/libstrongswan-kdf.so
 usr/lib/ipsec/plugins/libstrongswan-ldap.so
 usr/lib/ipsec/plugins/libstrongswan-md5.so
 usr/lib/ipsec/plugins/libstrongswan-mgf1.so
@@ -22,6 +23,7 @@ usr/lib/ipsec/plugins/libstrongswan-sha1.so
 usr/lib/ipsec/plugins/libstrongswan-sha2.so
 usr/lib/ipsec/plugins/libstrongswan-test-vectors.so
 usr/lib/ipsec/plugins/libstrongswan-tpm.so
+usr/lib/ipsec/plugins/libstrongswan-xcbc.so
 # default configuration files
 usr/share/strongswan/templates/config/plugins/aes.conf
 usr/share/strongswan/templates/config/plugins/ccm.conf
@@ -33,6 +35,7 @@ usr/share/strongswan/templates/config/plugins/curve25519.conf
 usr/share/strongswan/templates/config/plugins/gcrypt.conf
 usr/share/strongswan/templates/config/plugins/gmp.conf
 usr/share/strongswan/templates/config/plugins/hmac.conf
+usr/share/strongswan/templates/config/plugins/kdf.conf
 usr/share/strongswan/templates/config/plugins/ldap.conf
 usr/share/strongswan/templates/config/plugins/md5.conf
 usr/share/strongswan/templates/config/plugins/mgf1.conf
@@ -44,6 +47,7 @@ usr/share/strongswan/templates/config/plugins/sha1.conf
 usr/share/strongswan/templates/config/plugins/sha2.conf
 usr/share/strongswan/templates/config/plugins/test-vectors.conf
 usr/share/strongswan/templates/config/plugins/tpm.conf
+usr/share/strongswan/templates/config/plugins/xcbc.conf
 # configuration files
 etc/strongswan.d/charon/aes.conf
 etc/strongswan.d/charon/ccm.conf
@@ -55,6 +59,7 @@ etc/strongswan.d/charon/curve25519.conf
 etc/strongswan.d/charon/gcrypt.conf
 etc/strongswan.d/charon/gmp.conf
 etc/strongswan.d/charon/hmac.conf
+etc/strongswan.d/charon/kdf.conf
 etc/strongswan.d/charon/ldap.conf
 etc/strongswan.d/charon/md5.conf
 etc/strongswan.d/charon/mgf1.conf
@@ -66,6 +71,7 @@ etc/strongswan.d/charon/sha1.conf
 etc/strongswan.d/charon/sha2.conf
 etc/strongswan.d/charon/test-vectors.conf
 etc/strongswan.d/charon/tpm.conf
+etc/strongswan.d/charon/xcbc.conf
 # TPM libs
 usr/lib/ipsec/libtpmtss.so.*
 usr/lib/ipsec/libtpmtss.so
