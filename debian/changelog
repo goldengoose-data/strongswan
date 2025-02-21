@@ -1,3 +1,31 @@
+strongswan (6.0.0-1) UNRELEASED; urgency=medium
+
+  [ Carles Pina i Estany ]
+  * Added po-debconf Catalan translation
+
+  [ Yves-Alexis Perez ]
+  * New upstream version 6.0.0
+  * d/patches: rebase against new upstream
+  * handle removal of bliss and ntru plugins
+  * d/control: drop breaks/replaces against 5.5 version
+  * d/rules: force-enable curve25519 plugin
+  * Enable some upstream-disabled plugin but move them to -extra-plugin
+  * move openssl plugin to libstrongswan package
+  * d/control: update pkg-config b-dep to pkgconf
+  * d/control: update strongswan metapackage to switch from strongswan-starter
+    to strongswan-swanctl (Closes: #1085384)
+  * d/copyright updated for new release (Closes: #1039527)
+  * d/control: drop conflict with openswan, not in Debian anymore
+  * d/control: drop obsolete breaks/replaces
+  * move pgp plugin to the -extra-plugins package
+  * move sshkey plugin to the -standard-plugin package
+  * move kdf and xcbc plugins to the -extra-plugins package
+  * move fips-prf to the -extra-plugins package
+  * update NEWS with info about the plugins moves
+  * d/control: update standards version to 4.7.1
+
+ -- Yves-Alexis Perez <corsac@debian.org>  Fri, 21 Feb 2025 14:08:16 +0100
+
 strongswan (5.9.13-2) unstable; urgency=medium
 
   * d/control: drop build-dep on systemd (Closes: #1060509)
