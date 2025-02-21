@@ -8,6 +8,7 @@ usr/lib/ipsec/plugins/libstrongswan-cmac.so
 usr/lib/ipsec/plugins/libstrongswan-ctr.so
 usr/lib/ipsec/plugins/libstrongswan-curl.so
 usr/lib/ipsec/plugins/libstrongswan-curve25519.so
+usr/lib/ipsec/plugins/libstrongswan-fips-prf.so
 usr/lib/ipsec/plugins/libstrongswan-gcrypt.so
 usr/lib/ipsec/plugins/libstrongswan-gmp.so
 usr/lib/ipsec/plugins/libstrongswan-hmac.so
@@ -32,6 +33,7 @@ usr/share/strongswan/templates/config/plugins/chapoly.conf
 usr/share/strongswan/templates/config/plugins/ctr.conf
 usr/share/strongswan/templates/config/plugins/curl.conf
 usr/share/strongswan/templates/config/plugins/curve25519.conf
+usr/share/strongswan/templates/config/plugins/fips-prf.conf
 usr/share/strongswan/templates/config/plugins/gcrypt.conf
 usr/share/strongswan/templates/config/plugins/gmp.conf
 usr/share/strongswan/templates/config/plugins/hmac.conf
@@ -56,6 +58,7 @@ etc/strongswan.d/charon/cmac.conf
 etc/strongswan.d/charon/ctr.conf
 etc/strongswan.d/charon/curl.conf
 etc/strongswan.d/charon/curve25519.conf
+etc/strongswan.d/charon/fips-prf.conf
 etc/strongswan.d/charon/gcrypt.conf
 etc/strongswan.d/charon/gmp.conf
 etc/strongswan.d/charon/hmac.conf

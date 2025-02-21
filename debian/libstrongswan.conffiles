@@ -11,3 +11,4 @@ remove-on-upgrade /etc/strongswan.d/charon/pgp.conf
 remove-on-upgrade /etc/strongswan.d/charon/sshkey.conf
 remove-on-upgrade /etc/strongswan.d/charon/kdf.conf
 remove-on-upgrade /etc/strongswan.d/charon/xcbc.conf
+remove-on-upgrade /etc/strongswan.d/charon/fips-prf.conf

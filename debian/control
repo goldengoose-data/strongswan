@@ -64,7 +64,6 @@ Description: strongSwan utility and crypto library
   - constraints (X.509 certificate advanced constraint checking)
   - dnskey (Parse RFC 4034 public keys)
   - drbg (NIST SP-800-90A Deterministic Random Bit Generator)
-  - fips-prf (PRF specified by FIPS, used by EAP-SIM/AKA algorithms)
   - nonce (Default nonce generation plugin)
   - openssl (Crypto backend based on OpenSSL, provides
     RSA/ECDSA/DH/ECDH/ciphers/hashers/HMAC/X.509/CRL/RNG)
@@ -127,6 +126,7 @@ Description: strongSwan utility and crypto library (extra plugins)
   - curl (libcurl based HTTP/FTP fetcher)
   - curve25519 (support for Diffie-Hellman group 31 using Curve25519 and
     support for the Ed25519 digital signature algorithm for IKEv2)
+  - fips-prf (PRF specified by FIPS, used by EAP-SIM/AKA algorithms)
   - gcrypt (Crypto backend based on libgcrypt, provides
     RSA/DH/ciphers/hashers/rng)
   - gmp (RSA/DH crypto backend based on libgmp)
