@@ -255,6 +255,7 @@ Depends: iproute2 [linux-any] | iproute [linux-any],
          strongswan-swanctl,
          ${misc:Depends},
          ${shlibs:Depends}
+Breaks: charon-systemd
 Provides: ike-server
 Description: strongSwan Internet Key Exchange daemon
  The strongSwan VPN suite uses the native IPsec stack in the standard
@@ -322,6 +323,7 @@ Depends: libstrongswan (= ${binary:Version}),
          strongswan-swanctl,
          ${misc:Depends},
          ${shlibs:Depends}
+Breaks: strongswan-charon
 Description: strongSwan IPsec client, systemd support
  The strongSwan VPN suite uses the native IPsec stack in the standard
  Linux kernel. It supports both the IKEv1 and IKEv2 protocols.
