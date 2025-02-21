@@ -74,7 +74,6 @@ Description: strongSwan utility and crypto library
   - pubkey (Wrapper to handle raw public keys as trusted certificates)
   - random (RNG reading from /dev/[u]random)
   - revocation (X.509 CRL/OCSP revocation checking)
-  - sshkey (SSH key decoding routines)
   - x509 (Advanced X.509 plugin for parsing/generating X.509 certificates/CRLs
     and OCSP messages)
   - xcbc (XCBC wrapper using various ciphers)
@@ -91,6 +90,8 @@ Architecture: any
 Depends: libstrongswan (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
+Breaks: libstrongswan (<< 6.0.0-1~)
+Replaces: libstrongswan (<< 6.0.0-1~)
 Description: strongSwan utility and crypto library (standard plugins)
  The strongSwan VPN suite uses the native IPsec stack in the standard
  Linux kernel. It supports both the IKEv1 and IKEv2 protocols.
@@ -101,6 +102,7 @@ Description: strongSwan utility and crypto library (standard plugins)
  Included plugins are:
   - agent (RSA/ECDSA private key backend connecting to SSH-Agent)
   - gcm (GCM cipher mode wrapper)
+  - sshkey (SSH key decoding routines)
 
 Package: libstrongswan-extra-plugins
 Architecture: any

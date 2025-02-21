@@ -7,7 +7,6 @@ usr/lib/ipsec/plugins/libstrongswan-fips-prf.so
 usr/lib/ipsec/plugins/libstrongswan-kdf.so
 usr/lib/ipsec/plugins/libstrongswan-nonce.so
 usr/lib/ipsec/plugins/libstrongswan-openssl.so
-usr/lib/ipsec/plugins/libstrongswan-pgp.so
 usr/lib/ipsec/plugins/libstrongswan-pem.so
 usr/lib/ipsec/plugins/libstrongswan-pkcs1.so
 usr/lib/ipsec/plugins/libstrongswan-pkcs7.so
@@ -15,7 +14,6 @@ usr/lib/ipsec/plugins/libstrongswan-pkcs8.so
 usr/lib/ipsec/plugins/libstrongswan-pubkey.so
 usr/lib/ipsec/plugins/libstrongswan-random.so
 usr/lib/ipsec/plugins/libstrongswan-revocation.so
-usr/lib/ipsec/plugins/libstrongswan-sshkey.so
 usr/lib/ipsec/plugins/libstrongswan-x509.so
 usr/lib/ipsec/plugins/libstrongswan-xcbc.so
 # config files
@@ -26,7 +24,6 @@ usr/share/strongswan/templates/config/plugins/fips-prf.conf
 usr/share/strongswan/templates/config/plugins/kdf.conf
 usr/share/strongswan/templates/config/plugins/nonce.conf
 usr/share/strongswan/templates/config/plugins/openssl.conf
-usr/share/strongswan/templates/config/plugins/pgp.conf
 usr/share/strongswan/templates/config/plugins/pem.conf
 usr/share/strongswan/templates/config/plugins/pkcs1.conf
 usr/share/strongswan/templates/config/plugins/pkcs7.conf
@@ -34,7 +31,6 @@ usr/share/strongswan/templates/config/plugins/pkcs8.conf
 usr/share/strongswan/templates/config/plugins/pubkey.conf
 usr/share/strongswan/templates/config/plugins/random.conf
 usr/share/strongswan/templates/config/plugins/revocation.conf
-usr/share/strongswan/templates/config/plugins/sshkey.conf
 usr/share/strongswan/templates/config/plugins/x509.conf
 usr/share/strongswan/templates/config/plugins/xcbc.conf
 etc/strongswan.d/charon/constraints.conf
@@ -44,7 +40,6 @@ etc/strongswan.d/charon/fips-prf.conf
 etc/strongswan.d/charon/kdf.conf
 etc/strongswan.d/charon/nonce.conf
 etc/strongswan.d/charon/openssl.conf
-etc/strongswan.d/charon/pgp.conf
 etc/strongswan.d/charon/pem.conf
 etc/strongswan.d/charon/pkcs1.conf
 etc/strongswan.d/charon/pkcs7.conf
@@ -52,7 +47,6 @@ etc/strongswan.d/charon/pkcs8.conf
 etc/strongswan.d/charon/pubkey.conf
 etc/strongswan.d/charon/random.conf
 etc/strongswan.d/charon/revocation.conf
-etc/strongswan.d/charon/sshkey.conf
 etc/strongswan.d/charon/x509.conf
 etc/strongswan.d/charon/xcbc.conf
 usr/lib/ipsec/plugins/libstrongswan-attr.so
