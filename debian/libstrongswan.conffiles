@@ -7,3 +7,4 @@ remove-on-upgrade /etc/strongswan.d/charon/pkcs12.conf
 remove-on-upgrade /etc/strongswan.d/charon/rc2.conf
 remove-on-upgrade /etc/strongswan.d/charon/sha1.conf
 remove-on-upgrade /etc/strongswan.d/charon/sha2.conf
+remove-on-upgrade /etc/strongswan.d/charon/pgp.conf

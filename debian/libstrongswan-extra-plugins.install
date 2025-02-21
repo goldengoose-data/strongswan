@@ -14,6 +14,7 @@ usr/lib/ipsec/plugins/libstrongswan-hmac.so
 usr/lib/ipsec/plugins/libstrongswan-ldap.so
 usr/lib/ipsec/plugins/libstrongswan-md5.so
 usr/lib/ipsec/plugins/libstrongswan-mgf1.so
+usr/lib/ipsec/plugins/libstrongswan-pgp.so
 usr/lib/ipsec/plugins/libstrongswan-pkcs11.so
 usr/lib/ipsec/plugins/libstrongswan-pkcs12.so
 usr/lib/ipsec/plugins/libstrongswan-rc2.so
@@ -35,6 +36,7 @@ usr/share/strongswan/templates/config/plugins/hmac.conf
 usr/share/strongswan/templates/config/plugins/ldap.conf
 usr/share/strongswan/templates/config/plugins/md5.conf
 usr/share/strongswan/templates/config/plugins/mgf1.conf
+usr/share/strongswan/templates/config/plugins/pgp.conf
 usr/share/strongswan/templates/config/plugins/pkcs11.conf
 usr/share/strongswan/templates/config/plugins/pkcs12.conf
 usr/share/strongswan/templates/config/plugins/rc2.conf
@@ -56,6 +58,7 @@ etc/strongswan.d/charon/hmac.conf
 etc/strongswan.d/charon/ldap.conf
 etc/strongswan.d/charon/md5.conf
 etc/strongswan.d/charon/mgf1.conf
+etc/strongswan.d/charon/pgp.conf
 etc/strongswan.d/charon/pkcs11.conf
 etc/strongswan.d/charon/pkcs12.conf
 etc/strongswan.d/charon/rc2.conf
