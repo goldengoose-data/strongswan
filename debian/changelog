@@ -1,4 +1,4 @@
-strongswan (6.0.0-1) UNRELEASED; urgency=medium
+strongswan (6.0.0-1) unstable; urgency=medium
 
   [ Carles Pina i Estany ]
   * Added po-debconf Catalan translation
@@ -24,7 +24,7 @@ strongswan (6.0.0-1) UNRELEASED; urgency=medium
   * update NEWS with info about the plugins moves
   * d/control: update standards version to 4.7.1
 
- -- Yves-Alexis Perez <corsac@debian.org>  Fri, 21 Feb 2025 14:08:16 +0100
+ -- Yves-Alexis Perez <corsac@debian.org>  Fri, 21 Feb 2025 14:09:27 +0100
 
 strongswan (5.9.13-2) unstable; urgency=medium
 
