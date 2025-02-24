@@ -1,3 +1,10 @@
+strongswan (6.0.0-3) UNRELEASED; urgency=medium
+
+  * d/control: revert strongswan-charon to strongswan-starter dependency
+    (Closes: #1098714)
+
+ -- Yves-Alexis Perez <corsac@debian.org>  Mon, 24 Feb 2025 09:22:31 +0100
+
 strongswan (6.0.0-2) unstable; urgency=medium
 
   * debian/tests: update tests dependencies for metapackage changes
