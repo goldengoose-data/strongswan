@@ -252,7 +252,7 @@ Architecture: any
 Pre-Depends: debconf | debconf-2.0
 Depends: iproute2 [linux-any] | iproute [linux-any],
          libstrongswan (= ${binary:Version}),
-         strongswan-swanctl,
+         strongswan-starter,
          ${misc:Depends},
          ${shlibs:Depends}
 Conflicts: charon-systemd
