@@ -75,15 +75,21 @@ automatic IKE port floating to port 4500 is used to work around NAT issues.
 
 .TP
 .BR connections.<conn>.proposals " [default]"
-A proposal is a set of algorithms. For non\-AEAD algorithms, this includes for
-IKE an encryption algorithm, an integrity algorithm, a pseudo random function
-and a Diffie\-Hellman group. For AEAD algorithms, instead of encryption and
-integrity algorithms, a combined algorithm is used.
+A proposal is a set of algorithms. For non\-AEAD IKE proposals, this includes an
+encryption algorithm, an integrity algorithm, a pseudo\-random function and a key
+exchange method. For AEAD proposals, instead of encryption and integrity
+algorithms, a combined mode algorithm is used.
 
-In IKEv2, multiple algorithms of the same kind can be specified in a single
-proposal, from which one gets selected. In IKEv1, only one algorithm per kind is
-allowed per proposal, more algorithms get implicitly stripped. Use multiple
-proposals to offer different algorithms combinations in IKEv1.
+With peers that support multiple IKEv2 key exchanges (RFC 9370), up to seven
+additional key exchanges may be negotiated. They can be configured by prefixing
+the algorithm keyword with
+.RB "" "keX_" ""
+(where X is a number between 1 and 7).
+
+For IKEv2, multiple algorithms of the same kind can be specified in a single
+proposal, from which one gets selected. For IKEv1, only one algorithm per kind
+is allowed per proposal, more algorithms get implicitly stripped. Use multiple
+proposals to offer different algorithm combinations with IKEv1.
 
 Algorithm keywords get separated using dashes. Multiple proposals may be
 separated by commas. The special value
@@ -195,7 +201,7 @@ irrespective of the value of this option (even when set to
 .TP
 .BR connections.<conn>.childless " [allow]"
 Use childless IKE_SA initiation (RFC 6023) for IKEv2, with the first CHILD_SA
-created with a separate CREATE_CHILD_SA exchange (e.g. to use an independent DH
+created with a separate CREATE_CHILD_SA exchange (e.g. to use an independent key
 exchange for all CHILD_SAs).  Acceptable values are
 .RI "" "allow" ""
 (the default),
@@ -888,16 +894,22 @@ the CHILD_SA configuration, which must be unique within the connection.
 .TP
 .BR connections.<conn>.children.<child>.ah_proposals " []"
 AH proposals to offer for the CHILD_SA. A proposal is a set of algorithms. For
-AH, this includes an integrity algorithm and an optional Diffie\-Hellman group.
-If a DH group is specified, CHILD_SA/Quick Mode rekeying and initial negotiation
-uses a separate Diffie\-Hellman exchange using the specified group (refer to
+AH, this includes an integrity algorithm and an optional key exchange method. If
+a KE method is specified, CHILD_SA/Quick Mode rekeying and initial
+negotiation uses a separate key exchange using the negotiated method (refer to
 .RI "" "esp_proposals" ""
 for details).
 
-In IKEv2, multiple algorithms of the same kind can be specified in a single
-proposal, from which one gets selected. In IKEv1, only one algorithm per kind is
-allowed per proposal, more algorithms get implicitly stripped. Use multiple
-proposals to offer different algorithms combinations in IKEv1.
+With peers that support multiple IKEv2 key exchanges (RFC 9370), up to seven
+additional key exchanges may be negotiated. They can be configured by prefixing
+the algorithm keyword with
+.RB "" "keX_" ""
+(where X is a number between 1 and 7).
+
+For IKEv2, multiple algorithms of the same kind can be specified in a single
+proposal, from which one gets selected. For IKEv1, only one algorithm per kind
+is allowed per proposal, more algorithms get implicitly stripped. Use multiple
+proposals to offer different algorithm combinations with IKEv1.
 
 Algorithm keywords get separated using dashes. Multiple proposals may be
 separated by commas. The special value
@@ -910,18 +922,25 @@ proposed.
 .TP
 .BR connections.<conn>.children.<child>.esp_proposals " [default]"
 ESP proposals to offer for the CHILD_SA. A proposal is a set of algorithms. For
-ESP non\-AEAD proposals, this includes an integrity algorithm, an encryption
-algorithm, an optional Diffie\-Hellman group and an optional Extended Sequence
+non\-AEAD ESP proposals, this includes an integrity algorithm, an encryption
+algorithm, an optional key exchange method and an optional Extended Sequence
 Number Mode indicator. For AEAD proposals, a combined mode algorithm is used
 instead of the separate encryption/integrity algorithms.
 
-If a DH group is specified, CHILD_SA/Quick Mode rekeying and initial negotiation
-use a separate Diffie\-Hellman exchange using the specified group. However, for
+If a key exchange method is specified, CHILD_SA/Quick Mode rekeying and initial
+negotiation use a separate key exchange using the specified method. However, for
 IKEv2, the keys of the CHILD_SA created implicitly with the IKE_SA will always
-be derived from the IKE_SA's key material. So any DH group specified here will
-only apply when the CHILD_SA is later rekeyed or is created with a separate
-CREATE_CHILD_SA exchange. A proposal mismatch might, therefore, not immediately
-be noticed when the SA is established, but may later cause rekeying to fail.
+be derived from the IKE_SA's key material. So any key exchange method specified
+here will only apply when the CHILD_SA is later rekeyed or is created with a
+separate CREATE_CHILD_SA exchange. A proposal mismatch might, therefore, not
+immediately be noticed when the SA is established, but may later cause rekeying
+to fail.
+
+With peers that support multiple IKEv2 key exchanges (RFC 9370), up to seven
+additional key exchanges may be negotiated. They can be configured by prefixing
+the algorithm keyword with
+.RB "" "keX_" ""
+(where X is a number between 1 and 7).
 
 Extended Sequence Number support may be indicated with the
 .RI "" "esn" ""
@@ -931,10 +950,10 @@ values, both may be included to indicate support for both modes. If omitted,
 .RI "" "noesn" ""
 is assumed.
 
-In IKEv2, multiple algorithms of the same kind can be specified in a single
-proposal, from which one gets selected. In IKEv1, only one algorithm per kind is
-allowed per proposal, more algorithms get implicitly stripped. Use multiple
-proposals to offer different algorithms combinations in IKEv1.
+For IKEv2, multiple algorithms of the same kind can be specified in a single
+proposal, from which one gets selected. For IKEv1, only one algorithm per kind
+is allowed per proposal, more algorithms get implicitly stripped. Use multiple
+proposals to offer different algorithm combinations with IKEv1.
 
 Algorithm keywords get separated using dashes. Multiple proposals may be
 separated by commas. The special value
@@ -974,7 +993,13 @@ service name, or the special value
 .RI "" "opaque" ""
 for RFC 4301
 OPAQUE selectors. Port ranges may be specified as well, none of the kernel
-backends currently support port ranges, though.
+backends currently support port ranges, though. If the protocol is
+.RI "" "icmp" ""
+or
+.RI "" "ipv6\-icmp" ","
+the port is interpreted as ICMP message type if it is less than 256
+or as type and code if it is greater or equal to 256, with the type in the most
+significant 8 bits and the code in the least significant 8 bits.
 
 When IKEv1 is used only the first selector is interpreted, except if the Cisco
 Unity extension plugin is used. This is due to a limitation of the IKEv1
