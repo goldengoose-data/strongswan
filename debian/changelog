@@ -1,4 +1,4 @@
-strongswan (6.0.1-1) UNRELEASED; urgency=medium
+strongswan (6.0.1-1) unstable; urgency=medium
 
   * d/control: revert strongswan-charon to strongswan-starter dependency
     (Closes: #1098714)
@@ -6,7 +6,7 @@ strongswan (6.0.1-1) UNRELEASED; urgency=medium
     - fix regression in DHCP handling (Closes: #1098857)
   * d/strongswan-nm.install: ship the charon-nm config
 
- -- Yves-Alexis Perez <corsac@debian.org>  Fri, 14 Mar 2025 18:55:30 +0100
+ -- Yves-Alexis Perez <corsac@debian.org>  Fri, 14 Mar 2025 18:55:38 +0100
 
 strongswan (6.0.0-2) unstable; urgency=medium
 
