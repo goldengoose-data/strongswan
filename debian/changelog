@@ -1,8 +1,9 @@
 strongswan (6.0.1-2) UNRELEASED; urgency=medium
 
   * autopkgtest: plugins uses the strongswan-starter service
+  * d/control: add conflicts against libreswan
 
- -- Yves-Alexis Perez <corsac@debian.org>  Wed, 19 Mar 2025 11:18:43 +0100
+ -- Yves-Alexis Perez <corsac@debian.org>  Wed, 19 Mar 2025 14:22:27 +0100
 
 strongswan (6.0.1-1) unstable; urgency=medium
 
