@@ -216,6 +216,7 @@ Depends: adduser,
          sysvinit-utils (>= 3.05-3),
          ${misc:Depends},
          ${shlibs:Depends}
+Conflicts: libreswan
 Recommends: strongswan-charon
 Description: strongSwan daemon starter and configuration file parser
  The strongSwan VPN suite uses the native IPsec stack in the standard
