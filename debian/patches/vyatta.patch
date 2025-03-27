@@ -1,0 +1,10 @@
+--- a/init/systemd-starter/strongswan-starter.service.in
++++ b/init/systemd-starter/strongswan-starter.service.in
+@@ -1,6 +1,6 @@
+ [Unit]
+ Description=strongSwan IPsec IKEv1/IKEv2 daemon using ipsec.conf
+-After=network-online.target
++After=network-online.target config-loaded.target
+ 
+ [Service]
+ ExecStart=@SBINDIR@/@IPSEC_SCRIPT@ start --nofork
