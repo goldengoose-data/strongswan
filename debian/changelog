@@ -1,8 +1,8 @@
-strongswan (6.0.1-3) UNRELEASED; urgency=medium
+strongswan (6.0.1-3) unstable; urgency=medium
 
   * autopkgtest: daemon test also requires strongswan-charon
 
- -- Yves-Alexis Perez <corsac@debian.org>  Wed, 14 May 2025 14:13:53 +0200
+ -- Yves-Alexis Perez <corsac@debian.org>  Wed, 14 May 2025 14:15:36 +0200
 
 strongswan (6.0.1-2) unstable; urgency=medium
 
