@@ -1,8 +1,8 @@
-strongswan (6.0.1-5) UNRELEASED; urgency=medium
+strongswan (6.0.1-5) unstable; urgency=medium
 
   * autopkgtests: wait a bit to make sure daemons are started
 
- -- Yves-Alexis Perez <corsac@debian.org>  Tue, 20 May 2025 13:15:30 +0200
+ -- Yves-Alexis Perez <corsac@debian.org>  Tue, 20 May 2025 13:15:45 +0200
 
 strongswan (6.0.1-4) unstable; urgency=medium
 
