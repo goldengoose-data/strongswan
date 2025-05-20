@@ -4,6 +4,7 @@
 
 # restart strongswan to get current list of loaded modules
 invoke-rc.d strongswan-starter restart
+sleep 1
 invoke-rc.d strongswan-starter status
 
 STRONGSWAN_PKGS="$(dpkg --list | awk '/(strongswan|charon)/ {print $2}')"
