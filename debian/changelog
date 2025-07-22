@@ -1,10 +1,10 @@
-strongswan (6.0.1-6) UNRELEASED; urgency=medium
+strongswan (6.0.1-6) unstable; urgency=medium
 
   * d/control: keep strongswan-charon and strongswan-starter as acceptable
     dependencies for strongswan
     (Closes: #1109510)
 
- -- Yves-Alexis Perez <corsac@debian.org>  Mon, 21 Jul 2025 18:44:15 +0200
+ -- Yves-Alexis Perez <corsac@debian.org>  Tue, 22 Jul 2025 18:24:43 +0200
 
 strongswan (6.0.1-5) unstable; urgency=medium
 
