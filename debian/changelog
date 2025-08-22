@@ -1,3 +1,9 @@
+strongswan (6.0.1-7) UNRELEASED; urgency=medium
+
+  * d/patches: add patches to fix OpenSSL 3.5.1 support (Closes: #1109942)
+
+ -- Yves-Alexis Perez <corsac@debian.org>  Fri, 22 Aug 2025 09:58:30 +0200
+
 strongswan (6.0.1-6) unstable; urgency=medium
 
   * d/control: keep strongswan-charon and strongswan-starter as acceptable
