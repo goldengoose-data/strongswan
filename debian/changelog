@@ -1,8 +1,8 @@
-strongswan (6.0.1-6+deb13u2) UNRELEASED; urgency=medium
+strongswan (6.0.1-6+deb13u2) trixie-security; urgency=medium
 
   * d/patches: add fix for buffer overflow in EAP-MSCHAPv2 (CVE-2025-62291)
 
- -- Yves-Alexis Perez <corsac@debian.org>  Wed, 15 Oct 2025 12:08:44 +0200
+ -- Yves-Alexis Perez <corsac@debian.org>  Wed, 15 Oct 2025 12:09:29 +0200
 
 strongswan (6.0.1-6+deb13u1) trixie; urgency=medium
 
