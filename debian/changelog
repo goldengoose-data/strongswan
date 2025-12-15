@@ -1,9 +1,9 @@
-strongswan (6.0.1-6+deb13u3) UNRELEASED; urgency=medium
+strongswan (6.0.1-6+deb13u3) trixie-security; urgency=medium
 
   * d/patches: add fix for unauthorized credentials access (CVE-2025-9615)
     (Closes: #1122978)
 
- -- Yves-Alexis Perez <corsac@debian.org>  Mon, 15 Dec 2025 14:52:07 +0100
+ -- Yves-Alexis Perez <corsac@debian.org>  Mon, 15 Dec 2025 14:52:23 +0100
 
 strongswan (6.0.1-6+deb13u2) trixie-security; urgency=medium
 
