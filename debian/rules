@@ -76,7 +76,8 @@ ifeq ($(DEB_HOST_ARCH_OS),linux)
 		--enable-dhcp \
 		--enable-af-alg \
 		--enable-connmark \
-		--enable-systemd --enable-swanctl
+		--enable-systemd --enable-swanctl \
+		--with-systemdsystemunitdir=/lib/systemd/system
 endif
 
 ifeq ($(DEB_HOST_ARCH_OS),kfreebsd)
