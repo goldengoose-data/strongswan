@@ -1,8 +1,8 @@
-strongswan (6.0.1-6+deb13u4) UNRELEASED; urgency=medium
+strongswan (6.0.1-6+deb13u4) trixie-security; urgency=medium
 
   * d/patch: fix integer overflow in EAP-TTLS plugin (CVE-2026-25075)
 
- -- Yves-Alexis Perez <corsac@debian.org>  Mon, 16 Mar 2026 17:11:22 +0100
+ -- Yves-Alexis Perez <corsac@debian.org>  Mon, 16 Mar 2026 17:38:31 +0100
 
 strongswan (6.0.1-6+deb13u3) trixie-security; urgency=medium
 
