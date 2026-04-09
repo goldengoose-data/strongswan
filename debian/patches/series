@@ -9,3 +9,4 @@ dont-load-kernel-libipsec-plugin-by-default.patch
 0009-eap-ttls-Prevent-crash-if-AVP-length-header-field-is.patch
 0010-libsimaka-Reject-zero-length-EAP-SIM-AKA-attributes.patch
 0011-libradius-Reject-undersized-attributes-in-enumerator.patch
+0012-tls-server-Only-accept-non-empty-ECDH-public-keys-wi.patch
