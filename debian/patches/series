@@ -8,3 +8,4 @@ dont-load-kernel-libipsec-plugin-by-default.patch
 0008-nm-Create-safe-copies-of-files-for-user-specific-con.patch
 0009-eap-ttls-Prevent-crash-if-AVP-length-header-field-is.patch
 0010-libsimaka-Reject-zero-length-EAP-SIM-AKA-attributes.patch
+0011-libradius-Reject-undersized-attributes-in-enumerator.patch
