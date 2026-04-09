@@ -1,4 +1,4 @@
-strongswan (6.0.1-6+deb13u5) UNRELEASED; urgency=medium
+strongswan (6.0.1-6+deb13u5) trixie-security; urgency=medium
 
   * d/patches: add fix for integer underflow in libsimaka when handling
     EAP-SIM/AKA attributes (CVE-2026-35330)
@@ -15,7 +15,7 @@ strongswan (6.0.1-6+deb13u5) UNRELEASED; urgency=medium
   * d/patches: add fix for possible NULL-pointer dereference in gmp plugin for
     RSA decryption (CVE-2026-35334)
 
- -- Yves-Alexis Perez <corsac@debian.org>  Thu, 09 Apr 2026 09:30:07 +0200
+ -- Yves-Alexis Perez <corsac@debian.org>  Thu, 09 Apr 2026 09:36:31 +0200
 
 strongswan (6.0.1-6+deb13u4) trixie-security; urgency=medium
 
