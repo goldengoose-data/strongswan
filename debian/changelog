@@ -1,8 +1,8 @@
-strongswan (6.0.1-6+deb13u6) UNRELEASED; urgency=medium
+strongswan (6.0.1-6+deb13u6) trixie-security; urgency=medium
 
   * d/patches: add fix for double-free when cloning empty IDs (CVE-2026-47895)
 
- -- Yves-Alexis Perez <corsac@debian.org>  Wed, 27 May 2026 08:40:06 +0200
+ -- Yves-Alexis Perez <corsac@debian.org>  Wed, 27 May 2026 08:40:18 +0200
 
 strongswan (6.0.1-6+deb13u5) trixie-security; urgency=medium
 
