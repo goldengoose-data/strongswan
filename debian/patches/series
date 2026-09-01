@@ -20,3 +20,4 @@ dont-load-kernel-libipsec-plugin-by-default.patch
 0020-eap-aka-Only-accept-AKA-Synchronization-Failure-if-e.patch
 0021-message-Avoid-memory-leak-if-string-buffer-for-messa.patch
 0022-pkcs5-Validate-parsed-parameters-to-avoid-DoS-attack.patch
+0023-x509-Avoid-NULL-pointer-dereference-if-issuerName-is.patch
