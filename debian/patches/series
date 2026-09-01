@@ -22,3 +22,4 @@ dont-load-kernel-libipsec-plugin-by-default.patch
 0022-pkcs5-Validate-parsed-parameters-to-avoid-DoS-attack.patch
 0023-x509-Avoid-NULL-pointer-dereference-if-issuerName-is.patch
 0024-x509-Fix-memory-leaks-when-parsing-attribute-certifi.patch
+0025-x509-Prevent-infinite-loop-when-parsing-ietfAttrSynt.patch
