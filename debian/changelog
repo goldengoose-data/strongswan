@@ -1,4 +1,4 @@
-strongswan (6.0.1-6+deb13u7) UNRELEASED; urgency=medium
+strongswan (6.0.1-6+deb13u7) trixie-security; urgency=medium
 
   * d/patches: add fix for undefined memory access when verifying PKCS#7
     containers (CVE-2026-78123)
@@ -19,7 +19,7 @@ strongswan (6.0.1-6+deb13u7) UNRELEASED; urgency=medium
   * d/patches: properly reject CREATE_CHILD_SA requests on unestablished
     IKE_SA (CVE-2026-78135)
 
- -- Yves-Alexis Perez <corsac@debian.org>  Tue, 01 Sep 2026 13:28:39 +0200
+ -- Yves-Alexis Perez <corsac@debian.org>  Tue, 01 Sep 2026 13:29:28 +0200
 
 strongswan (6.0.1-6+deb13u6) trixie-security; urgency=medium
 
