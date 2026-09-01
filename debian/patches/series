@@ -18,3 +18,4 @@ dont-load-kernel-libipsec-plugin-by-default.patch
 0018-openssl-Fix-undefined-memory-access-when-verifying-P.patch
 0019-openssl-Fix-memory-leaks-after-enumerating-certifica.patch
 0020-eap-aka-Only-accept-AKA-Synchronization-Failure-if-e.patch
+0021-message-Avoid-memory-leak-if-string-buffer-for-messa.patch
