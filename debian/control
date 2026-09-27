@@ -10,6 +10,7 @@ Build-Depends: bison,
                bzip2,
                debhelper-compat (= 12),
                dh-apparmor,
+               dh-sequence-python3,
                dpkg-dev (>= 1.16.2),
                flex,
                gperf,
@@ -326,3 +327,14 @@ Description: strongSwan IPsec client, systemd support
  Linux kernel. It supports both the IKEv1 and IKEv2 protocols.
  .
  This package contains the charon-systemd files.
+
+Package: python3-vici
+Architecture: all
+Depends: strongswan-charon, ${misc:Depends}, ${python3:Depends}
+Section: python
+Description: strongSwan VICI Python bindings
+ The strongSwan VPN suite uses the native IPsec stack in the standard
+ Linux kernel. It supports both the IKEv1 and IKEv2 protocols.
+ .
+ This package contains the native Python 3 interface for charon's VICI
+ (Versatile IKE Control Interface) protocol.
