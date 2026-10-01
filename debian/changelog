@@ -1,3 +1,22 @@
+strongswan (6.0.1-6+deb13u7+elster1) trixie; urgency=medium
+
+  * Elster OS: rebase on Debian 6.0.1-6+deb13u7 (trixie security, CVE fixes
+    up to CVE-2026-78135) and forward-port the DANOS 2105 strongSwan stack
+    (5.9.0-0danos4):
+    - debian/patches/danos: the 24 Vyatta patches and the 8 hashtable/hashlist
+      reverts, refreshed for 6.0.1
+    - DANOS packaging: OpenSSL-only crypto (no aes, aesni, gmp, mgf1, chapoly,
+      drbg, tpm), no bypass-lan, ext-auth, ext-fetcher and load-tester plugins,
+      routes in the main table (254, rule priority 32766), signal handler
+      disabled, -dev packages, ipsec init script not enabled and no
+      strongswan-starter.service / ipsec.service (vyatta-security-vpn's
+      strongswan.service runs charon)
+  * Elster OS: python3-vici, strongswan-starter accepts lsb-base, systemd units
+    in /lib/systemd/system, GCC 15 / gettext 1.0 build flags, charon loads
+    swanctl credentials and connections at start (charon-start-at-boot).
+
+ -- Erik Ziegenbalg <erikziege@gmail.com>  Thu, 01 Oct 2026 14:41:46 +0000
+
 strongswan (6.0.1-6+deb13u7) trixie-security; urgency=medium
 
   * d/patches: add fix for undefined memory access when verifying PKCS#7
