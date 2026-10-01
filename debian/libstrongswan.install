@@ -2,7 +2,10 @@
 usr/lib/ipsec/libstrongswan.so*
 usr/lib/ipsec/plugins/libstrongswan-constraints.so
 usr/lib/ipsec/plugins/libstrongswan-dnskey.so
-usr/lib/ipsec/plugins/libstrongswan-drbg.so
+usr/lib/ipsec/plugins/libstrongswan-ext-auth.so
+usr/share/strongswan/templates/config/plugins/ext-auth.conf
+etc/strongswan.d/charon/ext-auth.conf
+#usr/lib/ipsec/plugins/libstrongswan-drbg.so
 usr/lib/ipsec/plugins/libstrongswan-nonce.so
 usr/lib/ipsec/plugins/libstrongswan-openssl.so
 usr/lib/ipsec/plugins/libstrongswan-pem.so
@@ -16,7 +19,7 @@ usr/lib/ipsec/plugins/libstrongswan-x509.so
 # config files
 usr/share/strongswan/templates/config/plugins/constraints.conf
 usr/share/strongswan/templates/config/plugins/dnskey.conf
-usr/share/strongswan/templates/config/plugins/drbg.conf
+#usr/share/strongswan/templates/config/plugins/drbg.conf
 usr/share/strongswan/templates/config/plugins/nonce.conf
 usr/share/strongswan/templates/config/plugins/openssl.conf
 usr/share/strongswan/templates/config/plugins/pem.conf
@@ -29,7 +32,7 @@ usr/share/strongswan/templates/config/plugins/revocation.conf
 usr/share/strongswan/templates/config/plugins/x509.conf
 etc/strongswan.d/charon/constraints.conf
 etc/strongswan.d/charon/dnskey.conf
-etc/strongswan.d/charon/drbg.conf
+#etc/strongswan.d/charon/drbg.conf
 etc/strongswan.d/charon/nonce.conf
 etc/strongswan.d/charon/openssl.conf
 etc/strongswan.d/charon/pem.conf

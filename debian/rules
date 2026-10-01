@@ -1,5 +1,9 @@
 #!/usr/bin/make -f
 export DEB_LDFLAGS_MAINT_APPEND=-Wl,-O1
+# Elster OS: GCC 15 and gettext 1.0 build environments (xUbuntu, elster-next)
+export ACLOCAL_PATH=/usr/share/gettext/m4
+# DANOS specific: disable signal handler, to obtain vanilla cores
+export DEB_CFLAGS_MAINT_APPEND=-std=gnu17 -DDISABLE_SIGNAL_HANDLER
 #export DEB_LDFLAGS_MAINT_APPEND=-Wl,--as-needed -Wl,-O1 -Wl,-z,defs
 export DEB_BUILD_MAINT_OPTIONS=hardening=+all
 
@@ -66,6 +70,8 @@ CONFIGUREARGS := --libdir=/usr/lib --libexecdir=/usr/lib \
 
 # get the various DEB_BUILD/DEB_HOST variables
 include /usr/share/dpkg/architecture.mk
+# get DEB_VERSION_UPSTREAM
+include /usr/share/dpkg/pkg-info.mk
 
 # the padlock plugin only makes sense on i386
 # AESNI and RdRand only make sense on i386 and amd64
@@ -87,7 +93,8 @@ ifeq ($(DEB_HOST_ARCH_OS),linux)
 		--enable-dhcp \
 		--enable-af-alg \
 		--enable-connmark \
-		--enable-systemd --enable-swanctl
+		--enable-systemd --enable-swanctl \
+		--with-systemdsystemunitdir=/lib/systemd/system
 endif
 
 ifeq ($(DEB_HOST_ARCH_OS),kfreebsd)
@@ -98,7 +105,22 @@ ifeq ($(DEB_HOST_ARCH_OS),kfreebsd)
 		--with-group=wheel
 endif
 
-deb_systemdsystemunitdir = $(shell pkg-config --variable=systemdsystemunitdir systemd | sed s,^/,,)
+# Additional options for DANOS
+CONFIGUREARGS += --with-routing-table=254 \
+	--with-routing-table-prio=32766 \
+	--disable-aes \
+	--enable-ext-auth \
+	--enable-ext-fetcher \
+	--enable-vici \
+	--disable-aesni \
+	--disable-gmp \
+	--disable-mgf1 \
+	--disable-bypass-lan \
+	--disable-chapoly \
+	--disable-tpm \
+	--disable-tss-tss2 \
+	--disable-drbg \
+	--enable-load-tester
 
 override_dh_auto_configure:
 	dh_auto_configure -- $(CONFIGUREARGS)
@@ -146,9 +168,10 @@ ifeq ($(DEB_HOST_ARCH_OS),linux)
 	dh_install -p libstrongswan-extra-plugins usr/share/strongswan/templates/config/plugins/af-alg.conf
 	dh_install -p libstrongswan-extra-plugins etc/strongswan.d/charon/af-alg.conf
 	# the systemd service file only gets generated on Linux
-	dh_install -p strongswan-starter "$(deb_systemdsystemunitdir)/strongswan-starter.service"
-	dh_link -p strongswan-starter "$(deb_systemdsystemunitdir)/strongswan-starter.service" "$(deb_systemdsystemunitdir)/ipsec.service"
-	dh_install -p charon-systemd "$(deb_systemdsystemunitdir)/strongswan.service"
+	# DANOS: no strongswan-starter.service (and no ipsec.service alias); the
+	# Vyatta stack runs charon through vyatta-security-vpn's strongswan.service
+	rm -f debian/tmp/lib/systemd/system/strongswan-starter.service
+	dh_install -p charon-systemd lib/systemd/system/strongswan.service
 	# XFRM is Linux only
 	dh_install -p strongswan-libcharon usr/lib/ipsec/xfrmi
 endif
@@ -174,9 +197,10 @@ ifeq ($(DEB_HOST_ARCH_CPU),i386)
 	dh_install -p libstrongswan-extra-plugins usr/share/strongswan/templates/config/plugins/rdrand.conf
 	dh_install -p libstrongswan-extra-plugins etc/strongswan.d/charon/rdrand.conf
 
-	dh_install -p libstrongswan-standard-plugins usr/lib/ipsec/plugins/libstrongswan-aesni.so
-	dh_install -p libstrongswan-standard-plugins usr/share/strongswan/templates/config/plugins/aesni.conf
-	dh_install -p libstrongswan-standard-plugins etc/strongswan.d/charon/aesni.conf
+# DANOS: OpenSSL only.
+#	dh_install -p libstrongswan-standard-plugins usr/lib/ipsec/plugins/libstrongswan-aesni.so
+#	dh_install -p libstrongswan-standard-plugins usr/share/strongswan/templates/config/plugins/aesni.conf
+#	dh_install -p libstrongswan-standard-plugins etc/strongswan.d/charon/aesni.conf
 endif
 
 ifeq ($(DEB_HOST_ARCH_CPU), amd64)
@@ -184,10 +208,23 @@ ifeq ($(DEB_HOST_ARCH_CPU), amd64)
 	dh_install -p libstrongswan-extra-plugins usr/share/strongswan/templates/config/plugins/rdrand.conf
 	dh_install -p libstrongswan-extra-plugins etc/strongswan.d/charon/rdrand.conf
 
-	dh_install -p libstrongswan-standard-plugins usr/lib/ipsec/plugins/libstrongswan-aesni.so
-	dh_install -p libstrongswan-standard-plugins usr/share/strongswan/templates/config/plugins/aesni.conf
-	dh_install -p libstrongswan-standard-plugins etc/strongswan.d/charon/aesni.conf
+# DANOS: OpenSSL only.
+#	dh_install -p libstrongswan-standard-plugins usr/lib/ipsec/plugins/libstrongswan-aesni.so
+#	dh_install -p libstrongswan-standard-plugins usr/share/strongswan/templates/config/plugins/aesni.conf
+#	dh_install -p libstrongswan-standard-plugins etc/strongswan.d/charon/aesni.conf
 endif
+
+# DANOS: libcharon and libstrongswan dev packages
+	mkdir -p $(CURDIR)/debian/tmp/usr/include/strongswan
+	cp -rf $(CURDIR)/src/libcharon/ $(CURDIR)/debian/tmp/usr/include/strongswan
+	cp -rf $(CURDIR)/src/libipsec/ $(CURDIR)/debian/tmp/usr/include/strongswan
+	cp -rf $(CURDIR)/src/libstrongswan/ $(CURDIR)/debian/tmp/usr/include/strongswan
+	find $(CURDIR)/debian/tmp/usr/include/strongswan -type f ! -name "*.h" -delete
+	find $(CURDIR)/debian/tmp/usr/include/strongswan -type d -name ".libs" | xargs --no-run-if-empty rm -rf
+	mkdir -p $(CURDIR)/debian/tmp/usr/share/pkgconfig
+	sed "s/@VERSION@/$(DEB_VERSION_UPSTREAM)/g" $(CURDIR)/debian/libstrongswan.pc.in > $(CURDIR)/debian/tmp/usr/share/pkgconfig/libstrongswan.pc
+	sed "s/@VERSION@/$(DEB_VERSION_UPSTREAM)/g" $(CURDIR)/debian/libcharon.pc.in > $(CURDIR)/debian/tmp/usr/share/pkgconfig/libcharon.pc
+	sed "s/@VERSION@/$(DEB_VERSION_UPSTREAM)/g" $(CURDIR)/debian/libipsec.pc.in > $(CURDIR)/debian/tmp/usr/share/pkgconfig/libipsec.pc
 
 	# then install the rest, ignoring the above
 	dh_install \
@@ -234,7 +271,8 @@ endif
 	find $(CURDIR)/debian/*strongswan*/ -name "/.svn/" | xargs --no-run-if-empty rm -rf
 
 override_dh_installinit:
-	dh_installinit --name=ipsec
+	# DANOS: don't enable sysvinit script
+	dh_installinit -n --name=ipsec
 
 override_dh_installchangelogs:
 	dh_installchangelogs NEWS

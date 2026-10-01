@@ -10,6 +10,7 @@ Build-Depends: bison,
                bzip2,
                debhelper-compat (= 12),
                dh-apparmor,
+               dh-sequence-python3,
                dpkg-dev (>= 1.16.2),
                flex,
                gperf,
@@ -30,7 +31,8 @@ Build-Depends: bison,
                libxml2-dev,
                pkgconf,
                po-debconf,
-               systemd-dev [linux-any],
+               python3,
+               systemd [linux-any],
                tzdata
 Homepage: http://www.strongswan.org
 
@@ -213,7 +215,7 @@ Architecture: any
 Pre-Depends: ${misc:Pre-Depends}
 Depends: adduser,
          libstrongswan (= ${binary:Version}),
-         sysvinit-utils (>= 3.05-3),
+         sysvinit-utils (>= 3.05-3) | lsb-base (>= 3.0-6),
          ${misc:Depends},
          ${shlibs:Depends}
 Conflicts: libreswan
@@ -330,3 +332,32 @@ Description: strongSwan IPsec client, systemd support
  Linux kernel. It supports both the IKEv1 and IKEv2 protocols.
  .
  This package contains the charon-systemd files.
+
+Package: python3-vici
+Architecture: all
+Depends: strongswan-charon, ${misc:Depends}, ${python3:Depends}
+Section: python
+Description: strongSwan VICI Python bindings
+ The strongSwan VPN suite uses the native IPsec stack in the standard
+ Linux kernel. It supports both the IKEv1 and IKEv2 protocols.
+ .
+ This package contains the native Python 3 interface for charon's VICI
+ (Versatile IKE Control Interface) protocol.
+
+Package: strongswan-libcharon-dev
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, strongswan-libcharon (= ${binary:Version})
+Description: Development file for strongSwan charon library
+ Contains C header files and development files for strongswan-libcharon.
+
+Package: libstrongswan-dev
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, libstrongswan (= ${binary:Version})
+Description: Development file for strongswan library
+ Contains C header files and development files for libstrongswan.
+
+Package: strongswan-libipsec-dev
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}, libcharon-extra-plugins (= ${binary:Version})
+Description: Development file for strongSwan libipsec library
+ Contains C header files and development files for strongswan-libipsec.
