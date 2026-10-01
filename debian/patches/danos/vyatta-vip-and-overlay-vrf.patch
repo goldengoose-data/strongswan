@@ -1,0 +1,1265 @@
+IPsec overlay VRF support.
+Install VIP on support.
+
+--- a/src/libcharon/kernel/kernel_ipsec.h
++++ b/src/libcharon/kernel/kernel_ipsec.h
+@@ -59,6 +59,8 @@ struct kernel_ipsec_sa_id_t {
+ 	mark_t mark;
+ 	/** Optional interface ID */
+ 	uint32_t if_id;
++	/** VRF domain parameter */
++	char *domain;
+ };
+ 
+ /**
+@@ -168,6 +170,8 @@ struct kernel_ipsec_policy_id_t {
+ 	char *interface;
+ 	/** Security label restricting policy */
+ 	sec_label_t *label;
++	/** VRF domain parameter */
++	char *domain;
+ };
+ 
+ /**
+--- a/src/libcharon/plugins/vici/vici_config.c
++++ b/src/libcharon/plugins/vici/vici_config.c
+@@ -339,6 +339,7 @@ typedef struct {
+ 	uint8_t dscp;
+ 	uint32_t if_id_in;
+ 	uint32_t if_id_out;
++	char *install_virtual_ip_on;
+ #ifdef ME
+ 	bool mediation;
+ 	char *mediated_by;
+@@ -455,6 +456,10 @@ static void log_peer_data(peer_data_t *d
+ 		DBG2(DBG_CFG, "  mediation_peer = %Y", data->peer_id);
+ 	}
+ #endif /* ME */
++	if (data->install_virtual_ip_on)
++	{
++		DBG2(DBG_CFG, "  install_virtual_ip_on = %s", data->install_virtual_ip_on);
++	}
+ 
+ 	if (data->vips->get_count(data->vips))
+ 	{
+@@ -500,6 +505,7 @@ static void free_peer_data(peer_data_t *
+ 	free(data->local_addrs);
+ 	free(data->remote_addrs);
+ 	DESTROY_IF(data->ppk_id);
++	free(data->install_virtual_ip_on);
+ #ifdef ME
+ 	free(data->mediated_by);
+ 	DESTROY_IF(data->peer_id);
+@@ -556,6 +562,7 @@ static void log_child_data(child_data_t
+ 	DBG2(DBG_CFG, "   interface = %s", cfg->interface);
+ 	DBG2(DBG_CFG, "   if_id_in = %u", cfg->if_id_in);
+ 	DBG2(DBG_CFG, "   if_id_out = %u", cfg->if_id_out);
++	DBG2(DBG_CFG, "   domain = %s", cfg->domain);
+ 	DBG2(DBG_CFG, "   mark_in = %u/%u",
+ 		 cfg->mark_in.value, cfg->mark_in.mask);
+ 	DBG2(DBG_CFG, "   mark_in_sa = %u", has_opt(OPT_MARK_IN_SA));
+@@ -593,6 +600,7 @@ static void free_child_data(child_data_t
+ 	DESTROY_IF(data->cfg.label);
+ 	free(data->cfg.updown);
+ 	free(data->cfg.interface);
++	free(data->cfg.domain);
+ }
+ 
+ /**
+@@ -1872,6 +1880,7 @@ CALLBACK(child_kv, bool,
+ 		{ "if_id_out",			parse_if_id,		&child->cfg.if_id_out				},
+ 		{ "label",				parse_label,		&child->cfg.label					},
+ 		{ "label_mode",			parse_label_mode,	&child->cfg.label_mode				},
++		{ "domain",			parse_string,		&child->cfg.domain				},
+ 	};
+ 
+ 	return parse_rules(rules, countof(rules), name, value,
+@@ -1955,6 +1964,7 @@ CALLBACK(peer_kv, bool,
+ 		{ "ppk_required",	parse_bool,			&peer->ppk_required			},
+ 		{ "if_id_in",		parse_if_id,		&peer->if_id_in				},
+ 		{ "if_id_out",		parse_if_id,		&peer->if_id_out			},
++		{ "install_virtual_ip_on",	parse_string,			&peer->install_virtual_ip_on			},
+ #ifdef ME
+ 		{ "mediation",		parse_bool,			&peer->mediation			},
+ 		{ "mediated_by",	parse_string,		&peer->mediated_by			},
+@@ -2884,6 +2894,7 @@ CALLBACK(config_sn, bool,
+ 		.ppk_required = peer.ppk_required,
+ 		.if_id_in = peer.if_id_in,
+ 		.if_id_out = peer.if_id_out,
++		.install_virtual_ip_on = peer.install_virtual_ip_on,
+ 	};
+ #ifdef ME
+ 	cfg.mediation = peer.mediation;
+--- a/src/libcharon/sa/child_sa.c
++++ b/src/libcharon/sa/child_sa.c
+@@ -629,6 +629,7 @@ static status_t update_usebytes(private_
+ 				.proto = proto_ike2ip(this->protocol),
+ 				.mark = mark_in_sa(this),
+ 				.if_id = this->if_id_in,
++				.domain = this->config->get_domain(this->config),
+ 			};
+ 			kernel_ipsec_query_sa_t query = {};
+ 
+@@ -663,6 +664,7 @@ static status_t update_usebytes(private_
+ 				.proto = proto_ike2ip(this->protocol),
+ 				.mark = this->mark_out,
+ 				.if_id = this->if_id_out,
++				.domain = this->config->get_domain(this->config),
+ 			};
+ 			kernel_ipsec_query_sa_t query = {};
+ 
+@@ -712,6 +714,7 @@ static bool update_usetime(private_child
+ 				.mark = this->mark_in,
+ 				.if_id = this->if_id_in,
+ 				.label = label_for(this, LABEL_USE_POLICY),
++				.domain = this->config->get_domain(this->config),
+ 			};
+ 			kernel_ipsec_query_policy_t query = {};
+ 
+@@ -740,6 +743,7 @@ static bool update_usetime(private_child
+ 				.if_id = this->if_id_out,
+ 				.interface = this->config->get_interface(this->config),
+ 				.label = label_for(this, LABEL_USE_POLICY),
++				.domain = this->config->get_domain(this->config),
+ 			};
+ 			kernel_ipsec_query_policy_t query = {};
+ 
+@@ -1019,6 +1023,7 @@ static status_t install_internal(private
+ 		.proto = proto_ike2ip(this->protocol),
+ 		.mark = inbound ? mark_in_sa(this) : this->mark_out,
+ 		.if_id = inbound ? this->if_id_in : this->if_id_out,
++		.domain = this->config->get_domain(this->config),
+ 	};
+ 	sa = (kernel_ipsec_add_sa_t){
+ 		.reqid = this->reqid,
+@@ -1152,6 +1157,7 @@ static status_t install_policies_inbound
+ 		.mark = this->mark_in,
+ 		.if_id = this->if_id_in,
+ 		.label = label_for(this, LABEL_USE_POLICY),
++		.domain = this->config->get_domain(this->config),
+ 	};
+ 	kernel_ipsec_manage_policy_t in_policy = {
+ 		.type = type,
+@@ -1190,6 +1196,7 @@ static status_t install_policies_outboun
+ 		.if_id = this->if_id_out,
+ 		.interface = this->config->get_interface(this->config),
+ 		.label = label_for(this, LABEL_USE_POLICY),
++		.domain = this->config->get_domain(this->config),
+ 	};
+ 	kernel_ipsec_manage_policy_t out_policy = {
+ 		.type = type,
+@@ -1266,6 +1273,7 @@ static void del_policies_inbound(private
+ 		.mark = this->mark_in,
+ 		.if_id = this->if_id_in,
+ 		.label = label_for(this, LABEL_USE_POLICY),
++		.domain = this->config->get_domain(this->config),
+ 	};
+ 	kernel_ipsec_manage_policy_t in_policy = {
+ 		.type = type,
+@@ -1303,6 +1311,7 @@ static void del_policies_outbound(privat
+ 		.if_id = this->if_id_out,
+ 		.interface = this->config->get_interface(this->config),
+ 		.label = label_for(this, LABEL_USE_POLICY),
++		.domain = this->config->get_domain(this->config),
+ 	};
+ 	kernel_ipsec_manage_policy_t out_policy = {
+ 		.type = type,
+@@ -1590,6 +1599,7 @@ METHOD(child_sa_t, remove_outbound, void
+ 		.proto = proto_ike2ip(this->protocol),
+ 		.mark = this->mark_out,
+ 		.if_id = this->if_id_out,
++		.domain = this->config->get_domain(this->config),
+ 	};
+ 	kernel_ipsec_del_sa_t sa = {
+ 		.cpi = this->other_cpi,
+@@ -1963,6 +1973,7 @@ METHOD(child_sa_t, destroy, void,
+ 			.proto = proto_ike2ip(this->protocol),
+ 			.mark = mark_in_sa(this),
+ 			.if_id = this->if_id_in,
++			.domain = this->config->get_domain(this->config),
+ 		};
+ 		kernel_ipsec_del_sa_t sa = {
+ 			.cpi = this->my_cpi,
+@@ -1978,6 +1989,7 @@ METHOD(child_sa_t, destroy, void,
+ 			.proto = proto_ike2ip(this->protocol),
+ 			.mark = this->mark_out,
+ 			.if_id = this->if_id_out,
++			.domain = this->config->get_domain(this->config),
+ 		};
+ 		kernel_ipsec_del_sa_t sa = {
+ 			.cpi = this->other_cpi,
+--- a/src/libcharon/sa/ike_sa.c
++++ b/src/libcharon/sa/ike_sa.c
+@@ -1039,12 +1039,13 @@ METHOD(ike_sa_t, add_virtual_ip, void,
+ {
+ 	if (local)
+ 	{
+-		char *iface;
++		/* prefer configured install_virtual_ip_on interface */
++		char *iface = strdupnull(this->peer_cfg->get_install_virtual_ip_on(this->peer_cfg));
+ 
+-		if (charon->kernel->get_interface(charon->kernel, this->my_host,
++		if (iface || charon->kernel->get_interface(charon->kernel, this->my_host,
+ 										  &iface))
+ 		{
+-			DBG1(DBG_IKE, "installing new virtual IP %H", ip);
++			DBG1(DBG_IKE, "installing new virtual IP %H on %s", ip, iface);
+ 			if (charon->kernel->add_ip(charon->kernel, ip, -1,
+ 									   iface) == SUCCESS)
+ 			{
+@@ -1052,7 +1053,7 @@ METHOD(ike_sa_t, add_virtual_ip, void,
+ 			}
+ 			else
+ 			{
+-				DBG1(DBG_IKE, "installing virtual IP %H failed", ip);
++				DBG1(DBG_IKE, "installing virtual IP %H on %s failed", ip, iface);
+ 			}
+ 			free(iface);
+ 		}
+--- a/src/libcharon/sa/shunt_manager.c
++++ b/src/libcharon/sa/shunt_manager.c
+@@ -154,6 +154,7 @@ static bool install_shunt_policy(child_c
+ 				.dst_ts = other_ts,
+ 				.mark = child->get_mark(child, FALSE),
+ 				.interface = interface,
++				.domain = NULL,
+ 			};
+ 			kernel_ipsec_manage_policy_t policy = {
+ 				.type = policy_type,
+@@ -177,6 +178,7 @@ static bool install_shunt_policy(child_c
+ 				.dst_ts = my_ts,
+ 				.mark = child->get_mark(child, TRUE),
+ 				.interface = interface,
++				.domain = NULL,
+ 			};
+ 			status |= charon->kernel->add_policy(charon->kernel, &id, &policy);
+ 			/* install "inbound" forward policy */
+@@ -327,6 +329,7 @@ static void uninstall_shunt_policy(child
+ 				.dst_ts = other_ts,
+ 				.mark = child->get_mark(child, FALSE),
+ 				.interface = interface,
++				.domain = NULL,
+ 			};
+ 			kernel_ipsec_manage_policy_t policy = {
+ 				.type = policy_type,
+@@ -350,6 +353,7 @@ static void uninstall_shunt_policy(child
+ 				.dst_ts = my_ts,
+ 				.mark = child->get_mark(child, TRUE),
+ 				.interface = interface,
++				.domain = NULL,
+ 			};
+ 			status |= charon->kernel->del_policy(charon->kernel, &id, &policy);
+ 			/* uninstall "inbound" forward policy */
+--- a/src/swanctl/swanctl.opt
++++ b/src/swanctl/swanctl.opt
+@@ -362,6 +362,12 @@ connections.<conn>.mediation_peer =
+ 	connections that set **mediated_by**. If it is not given, the remote IKE
+ 	identity of the first authentication round of this connection will be used.
+ 
++connections.<conn>.install_virtual_ip_on =
++	Interface where the virtual IP will be installed.
++
++	By default, the IKE egress interface is used to assign the internal tunnel address.
++	When specified, ther interface will be used to assign this internal tunnel address.
++
+ connections.<conn>.local<suffix> {}
+ 	Section for a local authentication round.
+ 
+@@ -1177,6 +1183,9 @@ connections.<conn>.children.<child>.clos
+ 	alive. It acts on explicit close messages only, but not on negotiation
+ 	failures. Use trap policies to reliably re-create failed CHILD_SAs.
+ 
++connections.<conn>.children.<child>.domain = none
++	VRF reference that is used to handle overlay VRF.
++
+ secrets { # }
+ 	Section defining secrets for IKE/EAP/XAuth authentication and private
+ 	key decryption.
+--- a/src/libcharon/config/child_cfg.c
++++ b/src/libcharon/config/child_cfg.c
+@@ -170,6 +170,11 @@ struct private_child_cfg_t {
+ 	char *interface;
+ 
+ 	/**
++	 * Optional domain the CHILD_SA is assigned to
++	 */
++	char *domain;
++
++	/**
+ 	 * anti-replay window size
+ 	 */
+ 	uint32_t replay_window;
+@@ -648,6 +653,12 @@ METHOD(child_cfg_t, get_interface, char*
+ 	return this->interface;
+ }
+ 
++METHOD(child_cfg_t, get_domain, char*,
++	private_child_cfg_t *this)
++{
++	return this->domain;
++}
++
+ METHOD(child_cfg_t, get_replay_window, uint32_t,
+ 	private_child_cfg_t *this)
+ {
+@@ -715,6 +726,7 @@ METHOD(child_cfg_t, equals, bool,
+ 		this->hw_offload == other->hw_offload &&
+ 		this->copy_dscp == other->copy_dscp &&
+ 		streq(this->updown, other->updown) &&
++		streq(this->domain, other->domain) &&
+ 		streq(this->interface, other->interface) &&
+ 		sec_labels_equal(this->label, other->label) &&
+ 		this->label_mode == other->label_mode;
+@@ -738,6 +750,7 @@ METHOD(child_cfg_t, destroy, void,
+ 		DESTROY_IF(this->label);
+ 		free(this->updown);
+ 		free(this->interface);
++		free(this->domain);
+ 		free(this->name);
+ 		free(this);
+ 	}
+@@ -776,6 +789,7 @@ child_cfg_t *child_cfg_create(char *name
+ 			.get_tfc = _get_tfc,
+ 			.get_manual_prio = _get_manual_prio,
+ 			.get_interface = _get_interface,
++			.get_domain = _get_domain,
+ 			.get_replay_window = _get_replay_window,
+ 			.set_replay_window = _set_replay_window,
+ 			.has_option = _has_option,
+@@ -807,6 +821,7 @@ child_cfg_t *child_cfg_create(char *name
+ 		.tfc = data->tfc,
+ 		.manual_prio = data->priority,
+ 		.interface = strdupnull(data->interface),
++		.domain = strdupnull(data->domain),
+ 		.refcount = 1,
+ 		.proposals = linked_list_create(),
+ 		.my_ts = linked_list_create(),
+--- a/src/libcharon/config/child_cfg.h
++++ b/src/libcharon/config/child_cfg.h
+@@ -310,6 +310,14 @@ struct child_cfg_t {
+ 	char* (*get_interface)(child_cfg_t *this);
+ 
+ 	/**
++	 * Get optional domain the CHILD_SA is assigned to
++	 *
++	 * @return				domain
++	 */
++	char* (*get_domain)(child_cfg_t *this);
++
++
++	/**
+ 	 * Get anti-replay window size
+ 	 *
+ 	 * @return				anti-replay window size
+@@ -420,6 +428,8 @@ struct child_cfg_create_t {
+ 	uint32_t priority;
+ 	/** Optional network interface restricting IPsec policy (cloned) */
+ 	char *interface;
++	/** Optional domain to assign the CHILD_SA to (aka. overlay VRF) (cloned) */
++	char *domain;
+ 	/** lifetime_cfg_t for this child_cfg */
+ 	lifetime_cfg_t lifetime;
+ 	/** Inactivity timeout in s before closing a CHILD_SA */
+--- a/src/libcharon/config/peer_cfg.c
++++ b/src/libcharon/config/peer_cfg.c
+@@ -154,6 +154,11 @@ struct private_peer_cfg_t {
+ 	linked_list_t *vips;
+ 
+ 	/**
++	 * Target interface to install requested virtual IPs on
++	 */
++	char *install_virtual_ip_on;
++
++	/**
+ 	 * List of pool names to use for virtual IP lookup
+ 	 */
+ 	linked_list_t *pools;
+@@ -601,6 +606,12 @@ METHOD(peer_cfg_t, create_virtual_ip_enu
+ 	return this->vips->create_enumerator(this->vips);
+ }
+ 
++METHOD(peer_cfg_t, get_install_virtual_ip_on, char *,
++	private_peer_cfg_t *this)
++{
++	return this->install_virtual_ip_on;
++}
++
+ METHOD(peer_cfg_t, add_pool, void,
+ 	private_peer_cfg_t *this, char *name)
+ {
+@@ -774,7 +785,8 @@ METHOD(peer_cfg_t, equals, bool,
+ 		this->if_id_in == other->if_id_in &&
+ 		this->if_id_out == other->if_id_out &&
+ 		this->ppk_required == other->ppk_required &&
+-		id_equal(this->ppk_id, other->ppk_id)
++		id_equal(this->ppk_id, other->ppk_id) &&
++		streq(this->install_virtual_ip_on, other->install_virtual_ip_on)
+ #ifdef ME
+ 		&& this->mediation == other->mediation &&
+ 		streq(this->mediated_by, other->mediated_by) &&
+@@ -803,6 +815,7 @@ METHOD(peer_cfg_t, destroy, void,
+ 		this->remote_auth->destroy_offset(this->remote_auth,
+ 										offsetof(auth_cfg_t, destroy));
+ 		this->vips->destroy_offset(this->vips, offsetof(host_t, destroy));
++		free(this->install_virtual_ip_on);
+ 		this->pools->destroy_function(this->pools, free);
+ #ifdef ME
+ 		DESTROY_IF(this->peer_id);
+@@ -860,6 +873,7 @@ peer_cfg_t *peer_cfg_create(char *name,
+ 			.get_dpd_timeout = _get_dpd_timeout,
+ 			.add_virtual_ip = _add_virtual_ip,
+ 			.create_virtual_ip_enumerator = _create_virtual_ip_enumerator,
++			.get_install_virtual_ip_on = _get_install_virtual_ip_on,
+ 			.add_pool = _add_pool,
+ 			.create_pool_enumerator = _create_pool_enumerator,
+ 			.add_auth_cfg = _add_auth_cfg,
+@@ -898,6 +912,7 @@ peer_cfg_t *peer_cfg_create(char *name,
+ 		.ppk_id = data->ppk_id,
+ 		.ppk_required = data->ppk_required,
+ 		.vips = linked_list_create(),
++		.install_virtual_ip_on = strdupnull(data->install_virtual_ip_on),
+ 		.pools = linked_list_create(),
+ 		.local_auth = linked_list_create(),
+ 		.remote_auth = linked_list_create(),
+--- a/src/libcharon/config/peer_cfg.h
++++ b/src/libcharon/config/peer_cfg.h
+@@ -364,6 +364,13 @@ struct peer_cfg_t {
+ 	 */
+ 	bool (*ppk_required)(peer_cfg_t *this);
+ 
++	/**
++	 * Get name of target inteface to install virtual IPs on.
++	 *
++	 * @return				the name of target interface
++	 */
++	char* (*get_install_virtual_ip_on)(peer_cfg_t *this);
++
+ #ifdef ME
+ 	/**
+ 	 * Is this a mediation connection?
+@@ -456,6 +463,8 @@ struct peer_cfg_create_t {
+ 	identification_t *ppk_id;
+ 	/** TRUE if a PPK is required, FALSE if it's optional */
+ 	bool ppk_required;
++	/** Target interface to install requested Virtual IPs on (cloned) */
++	char *install_virtual_ip_on;
+ #ifdef ME
+ 	/** TRUE if this is a mediation connection */
+ 	bool mediation;
+--- a/src/libcharon/plugins/kernel_netlink/kernel_netlink_ipsec.c
++++ b/src/libcharon/plugins/kernel_netlink/kernel_netlink_ipsec.c
+@@ -1764,6 +1764,7 @@ METHOD(kernel_ipsec_t, add_sa, status_t,
+ 	switch (mode)
+ 	{
+ 		case MODE_TUNNEL:
++			sa->sel.ifindex = id->domain ? if_nametoindex(id->domain) : 0;
+ 			sa->flags |= XFRM_STATE_AF_UNSPEC;
+ 			break;
+ 		case MODE_BEET:
+@@ -2767,7 +2768,7 @@ static bool find_xfrmi(private_kernel_ne
+  * Install a route for the given policy if enabled and required
+  */
+ static void install_route(private_kernel_netlink_ipsec_t *this,
+-	policy_entry_t *policy, policy_sa_t *mapping, ipsec_sa_t *ipsec)
++	policy_entry_t *policy, policy_sa_t *mapping, ipsec_sa_t *ipsec, char *domain, char *oif)
+ {
+ 	policy_sa_out_t *out = (policy_sa_out_t*)mapping;
+ 	route_entry_t *route;
+@@ -2776,40 +2777,48 @@ static void install_route(private_kernel
+ 	INIT(route,
+ 		.prefixlen = policy->sel.prefixlen_d,
+ 		.pass = mapping->type == POLICY_PASS,
++		.domain = domain ? strdup(domain) : NULL,
+ 	);
+ 
+-	if (charon->kernel->get_address_by_ts(charon->kernel, out->src_ts,
+-										  &route->src_ip, NULL) != SUCCESS)
++	if (oif)
+ 	{
+-		if (!route->pass)
++		route->if_name = strdup(oif);
++	} else {
++		if (charon->kernel->get_address_by_ts(charon->kernel, out->src_ts,
++											  &route->src_ip, NULL) != SUCCESS)
+ 		{
+-			free(route);
++			if (!route->pass)
++			{
++				free(route);
+ 			return;
++			}
++			/* allow blank source IP for passthrough policies */
++			route->src_ip = host_create_any(policy->sel.family);
+ 		}
+-		/* allow blank source IP for passthrough policies */
+-		route->src_ip = host_create_any(policy->sel.family);
+-	}
+ 
+-	if (!ipsec->dst->is_anyaddr(ipsec->dst))
+-	{
+-		/* if if_ids are used, install a route via XFRM interface if any,
+-		 * otherwise install the route via the interface we reach the peer */
+-		if (!policy->if_id || !this->xfrmi ||
+-			!find_xfrmi(this, policy->if_id, &route->if_name))
++		if (!ipsec->dst->is_anyaddr(ipsec->dst))
+ 		{
++			/* if if_ids are used, install a route via XFRM interface if any,
++			 * otherwise install the route via the interface we reach the peer */
++			if (!policy->if_id || !this->xfrmi ||
++				!find_xfrmi(this, policy->if_id, &route->if_name))
++			{
++				route->gateway = charon->kernel->get_nexthop(charon->kernel,
++													ipsec->dst, -1, ipsec->src,
++													&route->if_name, domain);
++			}
++		}
++		else
++		{	/* for shunt policies */
++			iface = xfrm2host(policy->sel.family, &policy->sel.daddr, 0);
+ 			route->gateway = charon->kernel->get_nexthop(charon->kernel,
+-												ipsec->dst, -1, ipsec->src,
+-												&route->if_name);
++												iface, policy->sel.prefixlen_d,
++												route->src_ip, &route->if_name,
++												domain);
++			iface->destroy(iface);
+ 		}
+ 	}
+-	else
+-	{	/* for shunt policies */
+-		iface = xfrm2host(policy->sel.family, &policy->sel.daddr, 0);
+-		route->gateway = charon->kernel->get_nexthop(charon->kernel,
+-											iface, policy->sel.prefixlen_d,
+-											route->src_ip, &route->if_name);
+-		iface->destroy(iface);
+-	}
++
+ 	route->dst_net = chunk_alloc(policy->sel.family == AF_INET ? 4 : 16);
+ 	memcpy(route->dst_net.ptr, &policy->sel.daddr, route->dst_net.len);
+ 
+@@ -2843,7 +2852,7 @@ static void install_route(private_kernel
+ 		if (charon->kernel->del_route(charon->kernel, old->dst_net,
+ 									  old->prefixlen, old->gateway,
+ 									  old->src_ip, old->if_name,
+-									  old->pass) != SUCCESS)
++									  old->pass, old->domain) != SUCCESS)
+ 		{
+ 			DBG1(DBG_KNL, "error uninstalling route installed with policy "
+ 				 "%R === %R %N", out->src_ts, out->dst_ts, policy_dir_names,
+@@ -2853,12 +2862,12 @@ static void install_route(private_kernel
+ 		policy->route = NULL;
+ 	}
+ 
+-	DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s", out->dst_ts,
+-		 route->gateway, route->src_ip, route->if_name);
++	DBG2(DBG_KNL, "installing route: %R via %H src %H dev %s vrf %s", out->dst_ts,
++		 route->gateway, route->src_ip, route->if_name, route->domain ? route->domain : "");
+ 	switch (charon->kernel->add_route(charon->kernel, route->dst_net,
+ 									  route->prefixlen, route->gateway,
+ 									  route->src_ip, route->if_name,
+-									  route->pass))
++									  route->pass, route->domain))
+ 	{
+ 		default:
+ 			DBG1(DBG_KNL, "unable to install source route for %H",
+@@ -2882,7 +2891,7 @@ static void install_route(private_kernel
+  * and is unlocked here in any case.
+  */
+ static status_t add_policy_internal(private_kernel_netlink_ipsec_t *this,
+-	policy_entry_t *policy, policy_sa_t *mapping, bool update)
++	policy_entry_t *policy, policy_sa_t *mapping, bool update, char *domain, char *oif)
+ {
+ 	netlink_buf_t request;
+ 	policy_entry_t clone;
+@@ -3048,7 +3057,7 @@ static status_t add_policy_internal(priv
+ 		if (mapping->type == POLICY_PASS ||
+ 		   (mapping->type == POLICY_IPSEC && ipsec->cfg.mode != MODE_TRANSPORT))
+ 		{
+-			install_route(this, policy, mapping, ipsec);
++			install_route(this, policy, mapping, ipsec, domain, oif);
+ 		}
+ 	}
+ 	policy_change_done(this, policy);
+@@ -3173,7 +3182,7 @@ METHOD(kernel_ipsec_t, add_policy, statu
+ 		 policy_dir_names, id->dir, markstr, labelstr, assigned_sa->priority,
+ 		 use_count);
+ 
+-	if (add_policy_internal(this, policy, assigned_sa, found) != SUCCESS)
++	if (add_policy_internal(this, policy, assigned_sa, found, id->domain, id->domain ? id->interface : NULL) != SUCCESS)
+ 	{
+ 		DBG1(DBG_KNL, "unable to %s policy %R === %R %N%s%s",
+ 			 found ? "update" : "add", id->src_ts, id->dst_ts,
+@@ -3380,7 +3389,7 @@ METHOD(kernel_ipsec_t, del_policy, statu
+ 			 "refcount %d]", id->src_ts, id->dst_ts, policy_dir_names, id->dir,
+ 			 markstr, labelstr, mapping->priority, use_count);
+ 
+-		if (add_policy_internal(this, current, mapping, TRUE) != SUCCESS)
++		if (add_policy_internal(this, current, mapping, TRUE, id->domain, id->domain ? id->interface : NULL) != SUCCESS)
+ 		{
+ 			DBG1(DBG_KNL, "unable to update policy %R === %R %N%s%s",
+ 				 id->src_ts, id->dst_ts, policy_dir_names, id->dir, markstr,
+@@ -3423,7 +3432,7 @@ METHOD(kernel_ipsec_t, del_policy, statu
+ 		if (charon->kernel->del_route(charon->kernel, route->dst_net,
+ 									  route->prefixlen, route->gateway,
+ 									  route->src_ip, route->if_name,
+-									  route->pass) != SUCCESS)
++									  route->pass, route->domain) != SUCCESS)
+ 		{
+ 			DBG1(DBG_KNL, "error uninstalling route installed with policy "
+ 				 "%R === %R %N%s%s", id->src_ts, id->dst_ts, policy_dir_names,
+--- a/src/libcharon/kernel/kernel_interface.c
++++ b/src/libcharon/kernel/kernel_interface.c
+@@ -581,13 +581,13 @@ METHOD(kernel_interface_t, get_source_ad
+ 
+ METHOD(kernel_interface_t, get_nexthop, host_t*,
+ 	private_kernel_interface_t *this, host_t *dest, int prefix, host_t *src,
+-	char **iface)
++	char **iface, char *domain)
+ {
+ 	if (!this->net)
+ 	{
+ 		return NULL;
+ 	}
+-	return this->net->get_nexthop(this->net, dest, prefix, src, iface);
++	return this->net->get_nexthop(this->net, dest, prefix, src, iface, domain);
+ }
+ 
+ METHOD(kernel_interface_t, get_interface, bool,
+@@ -644,27 +644,27 @@ METHOD(kernel_interface_t, del_ip, statu
+ METHOD(kernel_interface_t, add_route, status_t,
+ 	private_kernel_interface_t *this, chunk_t dst_net,
+ 	uint8_t prefixlen, host_t *gateway, host_t *src_ip, char *if_name,
+-	bool pass)
++	bool pass, char *domain)
+ {
+ 	if (!this->net)
+ 	{
+ 		return NOT_SUPPORTED;
+ 	}
+ 	return this->net->add_route(this->net, dst_net, prefixlen, gateway,
+-								src_ip, if_name, pass);
++								src_ip, if_name, pass, domain);
+ }
+ 
+ METHOD(kernel_interface_t, del_route, status_t,
+ 	private_kernel_interface_t *this, chunk_t dst_net,
+ 	uint8_t prefixlen, host_t *gateway, host_t *src_ip, char *if_name,
+-	bool pass)
++	bool pass, char *domain)
+ {
+ 	if (!this->net)
+ 	{
+ 		return NOT_SUPPORTED;
+ 	}
+ 	return this->net->del_route(this->net, dst_net, prefixlen, gateway,
+-								src_ip, if_name, pass);
++								src_ip, if_name, pass, domain);
+ }
+ 
+ METHOD(kernel_interface_t, bypass_socket, bool,
+--- a/src/libcharon/kernel/kernel_interface.h
++++ b/src/libcharon/kernel/kernel_interface.h
+@@ -319,7 +319,7 @@ struct kernel_interface_t {
+ 	 * @return				next hop address, NULL if unreachable
+ 	 */
+ 	host_t* (*get_nexthop)(kernel_interface_t *this, host_t *dest,
+-						   int prefix, host_t *src, char **iface);
++						   int prefix, host_t *src, char **iface, char *domain);
+ 
+ 	/**
+ 	 * Get the interface name of a local address. Interfaces that are down or
+@@ -391,13 +391,14 @@ struct kernel_interface_t {
+ 	 * @param gateway		gateway for this route
+ 	 * @param src_ip		source ip of the route
+ 	 * @param if_name		name of the interface the route is bound to
++	 * @param domain		name of the routing domain (aka. VRF) or NULL
+ 	 * @param pass			TRUE if route is installed for passthrough policy
+ 	 * @return				SUCCESS if operation completed
+ 	 *						ALREADY_DONE if the route already exists
+ 	 */
+ 	status_t (*add_route) (kernel_interface_t *this, chunk_t dst_net,
+ 						   uint8_t prefixlen, host_t *gateway, host_t *src_ip,
+-						   char *if_name, bool pass);
++						   char *if_name, bool pass, char *domain);
+ 
+ 	/**
+ 	 * Delete a route.
+@@ -407,12 +408,13 @@ struct kernel_interface_t {
+ 	 * @param gateway		gateway for this route
+ 	 * @param src_ip		source ip of the route
+ 	 * @param if_name		name of the interface the route is bound to
++	 * @param domain		name of the routing domain (aka. VRF) or NULL
+ 	 * @param pass			TRUE if route was installed for passthrough policy
+ 	 * @return				SUCCESS if operation completed
+ 	 */
+ 	status_t (*del_route) (kernel_interface_t *this, chunk_t dst_net,
+ 						   uint8_t prefixlen, host_t *gateway, host_t *src_ip,
+-						   char *if_name, bool pass);
++						   char *if_name, bool pass, char *domain);
+ 
+ 	/**
+ 	 * Set up a bypass policy for a given socket.
+--- a/src/libcharon/kernel/kernel_net.h
++++ b/src/libcharon/kernel/kernel_net.h
+@@ -94,7 +94,7 @@ struct kernel_net_t {
+ 	 * @return				next hop address, NULL if unreachable
+ 	 */
+ 	host_t* (*get_nexthop)(kernel_net_t *this, host_t *dest, int prefix,
+-						   host_t *src, char **iface);
++						   host_t *src, char **iface, char *domain);
+ 
+ 	/**
+ 	 * Get the interface name of a local address. Interfaces that are down or
+@@ -166,13 +166,14 @@ struct kernel_net_t {
+ 	 * @param gateway		gateway for this route
+ 	 * @param src_ip		source ip of the route
+ 	 * @param if_name		name of the interface the route is bound to
++	 * @param domain		name of routing domain
+ 	 * @param pass			TRUE if route is installed for passthrough policy
+ 	 * @return				SUCCESS if operation completed
+ 	 *						ALREADY_DONE if the route already exists
+ 	 */
+ 	status_t (*add_route) (kernel_net_t *this, chunk_t dst_net,
+ 						   uint8_t prefixlen, host_t *gateway, host_t *src_ip,
+-						   char *if_name, bool pass);
++						   char *if_name, bool pass, char *domain);
+ 
+ 	/**
+ 	 * Delete a route.
+@@ -182,12 +183,13 @@ struct kernel_net_t {
+ 	 * @param gateway		gateway for this route
+ 	 * @param src_ip		source ip of the route
+ 	 * @param if_name		name of the interface the route is bound to
++	 * @param domain		name of routing domain
+ 	 * @param pass			TRUE if route was installed for passthrough policy
+ 	 * @return				SUCCESS if operation completed
+ 	 */
+ 	status_t (*del_route) (kernel_net_t *this, chunk_t dst_net,
+ 						   uint8_t prefixlen, host_t *gateway, host_t *src_ip,
+-						   char *if_name, bool pass);
++						   char *if_name, bool pass, char *domain);
+ 
+ 	/**
+ 	 * Destroy the implementation.
+--- a/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c
++++ b/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c
+@@ -154,6 +154,12 @@ struct iface_entry_t {
+ 
+ 	/** TRUE if usable by config */
+ 	bool usable;
++
++	/** TRUE when assigned to a non-default VRF */
++	bool in_vrf;
++
++	/** VRF table id */
++	uint32_t vrf_table;
+ };
+ 
+ /**
+@@ -471,7 +477,7 @@ struct private_kernel_netlink_net_t {
+ static status_t manage_srcroute(private_kernel_netlink_net_t *this,
+ 								int nlmsg_type, int flags, chunk_t dst_net,
+ 								uint8_t prefixlen, host_t *gateway,
+-								host_t *src_ip, char *if_name, bool pass);
++								host_t *src_ip, char *if_name, bool pass, char *domain);
+ 
+ /**
+  * Clear the queued network changes.
+@@ -513,7 +519,7 @@ static job_requeue_t reinstall_routes(pr
+ 		}
+ 		/* check if a change for the outgoing interface is queued */
+ 		change = this->net_changes->get(this->net_changes, &lookup);
+-		if (!change)
++		if (!change && route->src_ip)
+ 		{	/* in case src_ip is not on the outgoing interface */
+ 			if (this->public.interface.get_interface(&this->public.interface,
+ 												route->src_ip, &lookup.if_name))
+@@ -529,7 +535,7 @@ static job_requeue_t reinstall_routes(pr
+ 		{
+ 			manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE | NLM_F_EXCL,
+ 							route->dst_net, route->prefixlen, route->gateway,
+-							route->src_ip, route->if_name, route->pass);
++							route->src_ip, route->if_name, route->pass, route->domain);
+ 		}
+ 	}
+ 	enumerator->destroy(enumerator);
+@@ -1085,6 +1091,58 @@ CALLBACK(addr_entry_unregister, void,
+ 	addr_map_entry_remove(this->addrs, addr, iface);
+ }
+ 
++static void process_linkinfo_vrf(struct rtattr *parent_rta, bool *in_vrf, uint32_t *vrf_table)
++{
++	struct rtattr *rta = RTA_DATA(parent_rta);
++	size_t rtasize = RTA_PAYLOAD(parent_rta);
++
++	while (RTA_OK(rta, rtasize))
++	{
++		switch (rta->rta_type)
++		{
++			case IFLA_VRF_TABLE:
++				if (vrf_table)
++				{
++					*vrf_table = *(uint32_t *) RTA_DATA(rta);
++				}
++
++				if (in_vrf)
++				{
++					*in_vrf = TRUE;
++				}
++				break;
++		}
++		rta = RTA_NEXT(rta, rtasize);
++	}
++}
++
++static void process_linkinfo(struct rtattr *parent_rta, bool *in_vrf, uint32_t *vrf_table)
++{
++	struct rtattr *rta = RTA_DATA(parent_rta);
++	size_t rtasize = RTA_PAYLOAD(parent_rta);
++	char *kind = NULL;
++	struct rtattr *data = NULL;
++
++	while (RTA_OK(rta, rtasize))
++	{
++		switch (rta->rta_type)
++		{
++			case IFLA_INFO_KIND:
++				kind = (char *)RTA_DATA(rta);
++				break;
++			case IFLA_INFO_DATA:
++				data = rta;
++				break;
++		}
++		rta = RTA_NEXT(rta, rtasize);
++	}
++
++	if (data && kind && streq("vrf", kind))
++	{
++		process_linkinfo_vrf(data, in_vrf, vrf_table);
++	}
++}
++
+ /**
+  * process RTM_NEWLINK/RTM_DELLINK from kernel
+  */
+@@ -1097,6 +1155,8 @@ static void process_link(private_kernel_
+ 	enumerator_t *enumerator;
+ 	iface_entry_t *current, *entry = NULL;
+ 	char *name = NULL;
++	bool in_vrf = FALSE;
++	uint32_t vrf_table;
+ 	bool update = FALSE, update_routes = FALSE;
+ 
+ 	while (RTA_OK(rta, rtasize))
+@@ -1106,6 +1166,9 @@ static void process_link(private_kernel_
+ 			case IFLA_IFNAME:
+ 				name = RTA_DATA(rta);
+ 				break;
++			case IFLA_LINKINFO:
++				process_linkinfo(rta, &in_vrf, &vrf_table);
++				break;
+ 		}
+ 		rta = RTA_NEXT(rta, rtasize);
+ 	}
+@@ -1146,6 +1209,19 @@ static void process_link(private_kernel_
+ 				}
+ 			}
+ 			entry->flags = msg->ifi_flags;
++
++			if (in_vrf)
++			{
++				entry->in_vrf = TRUE;
++				entry->vrf_table = vrf_table;
++				DBG3(DBG_KNL, "interface %s in vrf table: %u", name, entry->vrf_table);
++			}
++			else
++			{
++				entry->in_vrf = FALSE;
++				DBG3(DBG_KNL, "interface %s has no vrf table assigned (default VRF)", name);
++			}
++
+ 			break;
+ 		}
+ 		case RTM_DELLINK:
+@@ -1670,6 +1746,41 @@ static int get_interface_index(private_k
+ }
+ 
+ /**
++ * get the vrf table id of an interface by name
++ */
++static bool get_interface_vrf_table(private_kernel_netlink_net_t *this, char* name, uint32_t *vrf_table)
++{
++	iface_entry_t *iface;
++	bool in_vrf = FALSE;
++
++	DBG2(DBG_KNL, "getting vrf table id for %s", name);
++
++	this->lock->read_lock(this->lock);
++	if (this->ifaces->find_first(this->ifaces, iface_entry_by_name,
++								(void**)&iface, name))
++	{
++		if (iface->in_vrf)
++		{
++			if (vrf_table)
++			{
++				*vrf_table = iface->vrf_table;
++				DBG2(DBG_KNL, "vrf table id for %s: %u", name, *vrf_table);
++			}
++			in_vrf = TRUE;
++		}
++	}
++	this->lock->unlock(this->lock);
++
++	if (!in_vrf)
++	{
++		DBG3(DBG_KNL, "unable to get vrf table id for %s", name);
++		return FALSE;
++	}
++
++	return TRUE;
++}
++
++/**
+  * get the name of an interface by index (allocated)
+  */
+ static char *get_interface_name_by_index(private_kernel_netlink_net_t *this,
+@@ -1822,7 +1933,7 @@ static rt_entry_t *parse_route(struct nl
+  */
+ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
+ 						 int prefix, bool nexthop, host_t *candidate,
+-						 char **iface, u_int recursion)
++						 char **iface, u_int recursion, char *domain)
+ {
+ 	netlink_buf_t request;
+ 	struct nlmsghdr *hdr, *out, *current;
+@@ -1835,6 +1946,7 @@ static host_t *get_route(private_kernel_
+ 	host_t *addr = NULL;
+ 	bool match_net;
+ 	int family;
++	int ifindex;
+ 
+ 	if (recursion > MAX_ROUTE_RECURSION)
+ 	{
+@@ -1891,6 +2003,14 @@ static host_t *get_route(private_kernel_
+ 		netlink_add_attribute(hdr, RTA_DST, chunk, sizeof(request));
+ 	}
+ 
++	/* domain/VRF support */
++	if (domain) {
++		ifindex = get_interface_index(this, domain);
++		chunk.ptr = (char*)&ifindex;
++		chunk.len = sizeof(ifindex);
++		netlink_add_attribute(hdr, RTA_OIF, chunk, sizeof(request));
++	}
++
+ 	if (this->socket->send(this->socket, hdr, &out, &len) != SUCCESS)
+ 	{
+ 		DBG2(DBG_KNL, "getting %s to reach %H/%d failed",
+@@ -2052,7 +2172,7 @@ static host_t *get_route(private_kernel_
+ 			if (gtw && !gtw->ip_equals(gtw, dest))
+ 			{
+ 				route->src_host = get_route(this, gtw, -1, FALSE, candidate,
+-											iface, recursion + 1);
++											iface, recursion + 1, domain);
+ 			}
+ 			DESTROY_IF(gtw);
+ 			if (route->src_host)
+@@ -2123,14 +2243,14 @@ static host_t *get_route(private_kernel_
+ METHOD(kernel_net_t, get_source_addr, host_t*,
+ 	private_kernel_netlink_net_t *this, host_t *dest, host_t *src)
+ {
+-	return get_route(this, dest, -1, FALSE, src, NULL, 0);
++	return get_route(this, dest, -1, FALSE, src, NULL, 0, NULL);
+ }
+ 
+ METHOD(kernel_net_t, get_nexthop, host_t*,
+ 	private_kernel_netlink_net_t *this, host_t *dest, int prefix, host_t *src,
+-	char **iface)
++	char **iface, char *domain)
+ {
+-	return get_route(this, dest, prefix, TRUE, src, iface, 0);
++	return get_route(this, dest, prefix, TRUE, src, iface, 0, domain);
+ }
+ 
+ /** enumerator over subnets */
+@@ -2541,7 +2661,8 @@ METHOD(kernel_net_t, del_ip, status_t,
+ static status_t manage_srcroute(private_kernel_netlink_net_t *this,
+ 								int nlmsg_type, int flags, chunk_t dst_net,
+ 								uint8_t prefixlen, host_t *gateway,
+-								host_t *src_ip, char *if_name, bool pass)
++								host_t *src_ip, char *if_name, bool pass,
++								char *domain)
+ {
+ 	netlink_buf_t request;
+ 	struct nlmsghdr *hdr;
+@@ -2564,10 +2685,10 @@ static status_t manage_srcroute(private_
+ 		half_prefixlen = 1;
+ 		/* no throw routes in the main table */
+ 		status = manage_srcroute(this, nlmsg_type, flags, half_net,
+-							half_prefixlen, gateway, src_ip, if_name, FALSE);
++							half_prefixlen, gateway, src_ip, if_name, FALSE, domain);
+ 		half_net.ptr[0] |= 0x80;
+ 		status |= manage_srcroute(this, nlmsg_type, flags, half_net,
+-							half_prefixlen, gateway, src_ip, if_name, FALSE);
++							half_prefixlen, gateway, src_ip, if_name, FALSE, domain);
+ 		return status;
+ 	}
+ 
+@@ -2594,6 +2715,12 @@ static status_t manage_srcroute(private_
+ 	if (this->routing_table < 256)
+ 	{
+ 		msg->rtm_table = this->routing_table;
++#ifdef HAVE_RTA_TABLE
++		if (domain)
++		{
++			msg->rtm_table = RT_TABLE_UNSPEC;
++		}
++#endif /* HAVE_RTA_TABLE */
+ 	}
+ 	else
+ 	{
+@@ -2605,6 +2732,7 @@ static status_t manage_srcroute(private_
+ 		return FAILED;
+ #endif /* HAVE_RTA_TABLE */
+ 	}
++
+ 	netlink_add_attribute(hdr, RTA_DST, dst_net, sizeof(request));
+ 
+ 	/* only when installing regular routes do we need all the parameters,
+@@ -2612,9 +2740,13 @@ static status_t manage_srcroute(private_
+ 	 * we don't support), for throw routes we don't need any of them either */
+ 	if (nlmsg_type == RTM_NEWROUTE && !pass)
+ 	{
+-		chunk = src_ip->get_address(src_ip);
+-		netlink_add_attribute(hdr, RTA_PREFSRC, chunk, sizeof(request));
+-		if (gateway && gateway->get_family(gateway) == src_ip->get_family(src_ip))
++		if (src_ip)
++		{
++			chunk = src_ip->get_address(src_ip);
++			netlink_add_attribute(hdr, RTA_PREFSRC, chunk, sizeof(request));
++		}
++
++		if (gateway && src_ip && gateway->get_family(gateway) == src_ip->get_family(src_ip))
+ 		{
+ 			chunk = gateway->get_address(gateway);
+ 			netlink_add_attribute(hdr, RTA_GATEWAY, chunk, sizeof(request));
+@@ -2648,6 +2780,17 @@ static status_t manage_srcroute(private_
+ 			netlink_add_attribute(hdr, RTA_METRICS, chunk, sizeof(request));
+ 		}
+ 	}
++
++#ifdef HAVE_RTA_TABLE
++	uint32_t vrf_table;
++	if (domain && get_interface_vrf_table(this, domain, &vrf_table))
++	{
++		chunk.ptr = (char*)&vrf_table;
++		chunk.len = sizeof(vrf_table);
++		netlink_add_attribute(hdr, RTA_TABLE, chunk, sizeof(request));
++	}
++#endif /* HAVE_RTA_TABLE */
++
+ 	return this->socket->send_ack(this->socket, hdr);
+ }
+ 
+@@ -2690,7 +2833,7 @@ static bool route_with_dst(route_entry_l
+ 
+ METHOD(kernel_net_t, add_route, status_t,
+ 	private_kernel_netlink_net_t *this, chunk_t dst_net, uint8_t prefixlen,
+-	host_t *gateway, host_t *src_ip, char *if_name, bool pass)
++	host_t *gateway, host_t *src_ip, char *if_name, bool pass, char *domain)
+ {
+ 	status_t status;
+ 	route_entry_t *found;
+@@ -2702,6 +2845,7 @@ METHOD(kernel_net_t, add_route, status_t
+ 			.src_ip = src_ip,
+ 			.if_name = if_name,
+ 			.pass = pass,
++			.domain = domain,
+ 		},
+ 		.this = this,
+ 	};
+@@ -2721,13 +2865,15 @@ METHOD(kernel_net_t, add_route, status_t
+ 
+ 	/* don't replace the route if we already have one with a VIP installed,
+ 	 * but keep track of it in case that other route is uninstalled */
+-	this->lock->read_lock(this->lock);
+-	if (!is_known_vip(this, src_ip))
+-	{
+-		found = this->routes->get_match(this->routes, &lookup,
+-										(void*)route_with_vip);
++	if (src_ip) {
++		this->lock->read_lock(this->lock);
++		if (!is_known_vip(this, src_ip))
++		{
++			found = this->routes->get_match(this->routes, &lookup,
++											(void*)route_with_vip);
++		}
++		this->lock->unlock(this->lock);
+ 	}
+-	this->lock->unlock(this->lock);
+ 	if (found)
+ 	{
+ 		status = SUCCESS;
+@@ -2736,7 +2882,7 @@ METHOD(kernel_net_t, add_route, status_t
+ 	{
+ 		status = manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE|NLM_F_REPLACE,
+ 								 dst_net, prefixlen, gateway, src_ip, if_name,
+-								 pass);
++								 pass, domain);
+ 	}
+ 	if (status == SUCCESS)
+ 	{
+@@ -2749,7 +2895,7 @@ METHOD(kernel_net_t, add_route, status_t
+ 
+ METHOD(kernel_net_t, del_route, status_t,
+ 	private_kernel_netlink_net_t *this, chunk_t dst_net, uint8_t prefixlen,
+-	host_t *gateway, host_t *src_ip, char *if_name, bool pass)
++	host_t *gateway, host_t *src_ip, char *if_name, bool pass, char *domain)
+ {
+ 	status_t status;
+ 	route_entry_t *found;
+@@ -2761,6 +2907,7 @@ METHOD(kernel_net_t, del_route, status_t
+ 			.src_ip = src_ip,
+ 			.if_name = if_name,
+ 			.pass = pass,
++			.domain = domain,
+ 		},
+ 		.this = this,
+ 	};
+@@ -2794,12 +2941,12 @@ METHOD(kernel_net_t, del_route, status_t
+ 	{
+ 		status = manage_srcroute(this, RTM_NEWROUTE, NLM_F_CREATE|NLM_F_REPLACE,
+ 							found->dst_net, found->prefixlen, found->gateway,
+-							found->src_ip, found->if_name, found->pass);
++							found->src_ip, found->if_name, found->pass, domain);
+ 	}
+ 	else
+ 	{
+ 		status = manage_srcroute(this, RTM_DELROUTE, 0, dst_net, prefixlen,
+-								 gateway, src_ip, if_name, pass);
++								 gateway, src_ip, if_name, pass, domain);
+ 	}
+ 	this->routes_lock->unlock(this->routes_lock);
+ 	return status;
+@@ -3047,7 +3194,7 @@ METHOD(kernel_net_t, destroy, void,
+ 	{
+ 		manage_srcroute(this, RTM_DELROUTE, 0, route->dst_net, route->prefixlen,
+ 						route->gateway, route->src_ip, route->if_name,
+-						route->pass);
++						route->pass, route->domain);
+ 		route_entry_destroy(route);
+ 	}
+ 	enumerator->destroy(enumerator);
+--- a/src/libcharon/plugins/kernel_netlink/kernel_netlink_shared.c
++++ b/src/libcharon/plugins/kernel_netlink/kernel_netlink_shared.c
+@@ -980,6 +980,8 @@ void netlink_log_error(struct nlmsghdr *
+ void route_entry_destroy(route_entry_t *this)
+ {
+ 	free(this->if_name);
++	if (this->domain)
++		free(this->domain);
+ 	DESTROY_IF(this->src_ip);
+ 	DESTROY_IF(this->gateway);
+ 	chunk_free(&this->dst_net);
+@@ -995,6 +997,7 @@ route_entry_t *route_entry_clone(const r
+ 
+ 	INIT(route,
+ 		.if_name = strdupnull(this->if_name),
++		.domain = this->domain ? strdup(this->domain) : NULL,
+ 		.src_ip = this->src_ip ? this->src_ip->clone(this->src_ip) : NULL,
+ 		.gateway = this->gateway ? this->gateway->clone(this->gateway) : NULL,
+ 		.dst_net = chunk_clone(this->dst_net),
+@@ -1031,5 +1034,6 @@ bool route_entry_equals(const route_entr
+ 		a->prefixlen == b->prefixlen &&
+ 		chunk_equals(a->dst_net, b->dst_net) &&
+ 		addrs_null_or_equal(a->src_ip, b->src_ip) &&
+-		addrs_null_or_equal(a->gateway, b->gateway);
++		addrs_null_or_equal(a->gateway, b->gateway) &&
++		streq(a->domain, b->domain);
+ }
+--- a/src/libcharon/plugins/kernel_netlink/kernel_netlink_shared.h
++++ b/src/libcharon/plugins/kernel_netlink/kernel_netlink_shared.h
+@@ -211,6 +211,9 @@ struct route_entry_t {
+ 
+ 	/** Whether the route was installed for a passthrough policy */
+ 	bool pass;
++
++	/** Overlay VRF */
++	char *domain;
+ };
+ 
+ typedef struct route_entry_t route_entry_t;
+--- a/src/libcharon/plugins/kernel_libipsec/kernel_libipsec_ipsec.c
++++ b/src/libcharon/plugins/kernel_libipsec/kernel_libipsec_ipsec.c
+@@ -330,7 +330,7 @@ static void add_exclude_route(private_ke
+ 	if (!route->exclude)
+ 	{
+ 		DBG2(DBG_KNL, "installing new exclude route for %H src %H", dst, src);
+-		gtw = charon->kernel->get_nexthop(charon->kernel, dst, -1, NULL, NULL);
++		gtw = charon->kernel->get_nexthop(charon->kernel, dst, -1, NULL, NULL, NULL);
+ 		if (gtw)
+ 		{
+ 			char *if_name = NULL;
+@@ -338,7 +338,7 @@ static void add_exclude_route(private_ke
+ 			if (charon->kernel->get_interface(charon->kernel, src, &if_name) &&
+ 				charon->kernel->add_route(charon->kernel, dst->get_address(dst),
+ 									dst->get_family(dst) == AF_INET ? 32 : 128,
+-									gtw, src, if_name, TRUE) == SUCCESS)
++									gtw, src, if_name, TRUE, NULL) == SUCCESS)
+ 			{
+ 				INIT(exclude,
+ 					.dst = dst->clone(dst),
+@@ -386,7 +386,7 @@ static void remove_exclude_route(private
+ 		charon->kernel->del_route(charon->kernel, dst->get_address(dst),
+ 								  dst->get_family(dst) == AF_INET ? 32 : 128,
+ 								  route->exclude->gtw, route->exclude->src,
+-								  if_name, TRUE) != SUCCESS)
++								  if_name, TRUE, NULL) != SUCCESS)
+ 	{
+ 		DBG1(DBG_KNL, "uninstalling exclude route for %H failed", dst);
+ 	}
+@@ -462,7 +462,7 @@ static bool install_route(private_kernel
+ #ifndef __linux__
+ 	/* on Linux we can't install a gateway */
+ 	route->gateway = charon->kernel->get_nexthop(charon->kernel, dst, -1, src,
+-												 NULL);
++												 NULL, NULL);
+ #endif
+ 
+ 	if (policy->route)
+@@ -478,7 +478,7 @@ static bool install_route(private_kernel
+ 		/* uninstall previously installed route */
+ 		if (charon->kernel->del_route(charon->kernel, old->dst_net,
+ 									  old->prefixlen, old->gateway, old->src_ip,
+-									  old->if_name, FALSE) != SUCCESS)
++									  old->if_name, FALSE, NULL) != SUCCESS)
+ 		{
+ 			DBG1(DBG_KNL, "error uninstalling route installed with policy "
+ 				 "%R === %R %N", src_ts, dst_ts, policy_dir_names,
+@@ -509,7 +509,7 @@ static bool install_route(private_kernel
+ 
+ 	switch (charon->kernel->add_route(charon->kernel, route->dst_net,
+ 									  route->prefixlen, route->gateway,
+-									  route->src_ip, route->if_name, FALSE))
++									  route->src_ip, route->if_name, FALSE, NULL))
+ 	{
+ 		case ALREADY_DONE:
+ 			/* route exists, do not uninstall */
+@@ -615,7 +615,7 @@ METHOD(kernel_ipsec_t, del_policy, statu
+ 
+ 		if (charon->kernel->del_route(charon->kernel, route->dst_net,
+ 								route->prefixlen, route->gateway, route->src_ip,
+-								route->if_name, FALSE) != SUCCESS)
++								route->if_name, FALSE, NULL) != SUCCESS)
+ 		{
+ 			DBG1(DBG_KNL, "error uninstalling route installed with "
+ 				 "policy %R === %R %N", id->src_ts, id->dst_ts,
+@@ -646,7 +646,7 @@ METHOD(kernel_ipsec_t, flush_policies, s
+ 
+ 			charon->kernel->del_route(charon->kernel, route->dst_net,
+ 									  route->prefixlen, route->gateway,
+-									  route->src_ip, route->if_name, FALSE);
++									  route->src_ip, route->if_name, FALSE, NULL);
+ 			remove_exclude_route(this, route);
+ 		}
+ 		policy_entry_destroy(pol);

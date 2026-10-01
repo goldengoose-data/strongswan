@@ -1,0 +1,84 @@
+--- a/src/libcharon/plugins/stroke/stroke_config.c
++++ b/src/libcharon/plugins/stroke/stroke_config.c
+@@ -1090,7 +1090,8 @@ static child_cfg_t *build_child_cfg(priv
+ 				   (msg->add_conn.ipcomp ? OPT_IPCOMP : 0) |
+ 				   (msg->add_conn.me.hostaccess ? OPT_HOSTACCESS : 0) |
+ 				   (msg->add_conn.install_policy ? 0 : OPT_NO_POLICIES) |
+-				   (msg->add_conn.sha256_96 ? OPT_SHA256_96 : 0),
++				   (msg->add_conn.sha256_96 ? OPT_SHA256_96 : 0) |
++				   (msg->add_conn.mark_in_sa ? OPT_MARK_IN_SA : 0),
+ 		.tfc = msg->add_conn.tfc,
+ 		.inactivity = msg->add_conn.inactivity,
+ 		.dpd_action = map_action(msg->add_conn.dpd.action),
+--- a/src/starter/confread.c
++++ b/src/starter/confread.c
+@@ -462,6 +462,9 @@ static void handle_keyword(kw_token_t to
+ 				cfg->err++;
+ 			}
+ 			break;
++		case KW_MARK_IN_SA:
++			KW_SA_OPTION_FLAG("yes", "no", SA_OPTION_MARK_IN_SA)
++			break;
+ 		case KW_TFC:
+ 			if (streq(value, "%mtu"))
+ 			{
+--- a/src/starter/keywords.txt
++++ b/src/starter/keywords.txt
+@@ -74,6 +74,7 @@ replay_window,     KW_REPLAY_WINDOW
+ mark,              KW_MARK
+ mark_in,           KW_MARK_IN
+ mark_out,          KW_MARK_OUT
++mark_in_sa,        KW_MARK_IN_SA
+ tfc,               KW_TFC
+ cacert,            KW_CACERT
+ crluri,            KW_CRLURI
+--- a/src/stroke/stroke_msg.h
++++ b/src/stroke/stroke_msg.h
+@@ -301,6 +301,7 @@ struct stroke_msg_t {
+ 				uint32_t value;
+ 				uint32_t mask;
+ 			} mark_in, mark_out;
++			int mark_in_sa;
+ 			stroke_end_t me, other;
+ 			uint32_t replay_window;
+ 			bool sha256_96;
+--- a/src/starter/starterstroke.c
++++ b/src/starter/starterstroke.c
+@@ -230,6 +230,7 @@ int starter_stroke_add_conn(starter_conf
+ 	msg->add_conn.mark_in.mask = conn->mark_in.mask;
+ 	msg->add_conn.mark_out.value = conn->mark_out.value;
+ 	msg->add_conn.mark_out.mask = conn->mark_out.mask;
++	msg->add_conn.mark_in_sa = conn->options & SA_OPTION_MARK_IN_SA;
+ 	msg->add_conn.tfc = conn->tfc;
+ 
+ 	add_end(&msg, offsetof(stroke_msg_t, add_conn.me), &conn->left);
+--- a/src/starter/args.c
++++ b/src/starter/args.c
+@@ -177,6 +177,7 @@ static const token_info_t token_info[] =
+ 	{ ARG_MISC, 0, NULL  /* KW_MARK */                                             },
+ 	{ ARG_MISC, 0, NULL  /* KW_MARK_IN */                                          },
+ 	{ ARG_MISC, 0, NULL  /* KW_MARK_OUT */                                         },
++	{ ARG_MISC, 0, NULL  /* KW_MARK_IN_SA */                                       },
+ 	{ ARG_MISC, 0, NULL  /* KW_TFC */                                              },
+ 	{ ARG_MISC, 0, NULL  /* KW_PFS_DEPRECATED */                                   },
+ 	{ ARG_MISC, 0, NULL  /* KW_CONN_DEPRECATED */                                  },
+--- a/src/starter/confread.h
++++ b/src/starter/confread.h
+@@ -81,6 +81,7 @@ typedef enum {
+ 		SA_OPTION_XAUTH_SERVER  = 1 << 5, /* are we an XAUTH server? */
+ 		SA_OPTION_MOBIKE		= 1 << 6, /* enable MOBIKE for IKEv2  */
+ 		SA_OPTION_FORCE_ENCAP   = 1 << 7, /* force UDP encapsulation */
++		SA_OPTION_MARK_IN_SA    = 1 << 8, /* Add mark to the INPUT SA */
+ } sa_option_t;
+ 
+ typedef struct starter_end starter_end_t;
+--- a/src/starter/keywords.h.in
++++ b/src/starter/keywords.h.in
+@@ -76,6 +76,7 @@ enum kw_token_t {
+ 	KW_MARK,
+ 	KW_MARK_IN,
+ 	KW_MARK_OUT,
++	KW_MARK_IN_SA,
+ 	KW_TFC,
+ 	KW_PFS_DEPRECATED,
+ 	KW_CONN_DEPRECATED,

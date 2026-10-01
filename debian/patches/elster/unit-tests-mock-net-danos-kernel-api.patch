@@ -1,0 +1,26 @@
+Description: unit tests: mock kernel_net_t with the DANOS kernel API
+ The DANOS patches source-interface.patch (get_source_addr: oif) and
+ vyatta-vip-and-overlay-vrf.patch (get_nexthop: domain) extend kernel_net_t;
+ DANOS left the libcharon unit-test mock unchanged, which GCC 14 rejects as an
+ incompatible pointer type (dh_auto_test builds the tests).
+Author: Erik Ziegenbalg <erikziege@gmail.com>
+Forwarded: not-needed
+--- a/src/libcharon/tests/utils/mock_net.c
++++ b/src/libcharon/tests/utils/mock_net.c
+@@ -44,14 +44,14 @@ struct private_kernel_net_t {
+ static private_kernel_net_t *instance;
+ 
+ METHOD(kernel_net_t, get_source_addr, host_t*,
+-	private_kernel_net_t *this, host_t *dest, host_t *src)
++	private_kernel_net_t *this, host_t *dest, host_t *src, char *oif)
+ {
+ 	return this->host->clone(this->host);
+ }
+ 
+ METHOD(kernel_net_t, get_nexthop, host_t*,
+ 	private_kernel_net_t *this, host_t *dest, int prefix, host_t *src,
+-	char **iface)
++	char **iface, char *domain)
+ {
+ 	if (iface)
+ 	{

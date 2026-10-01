@@ -1,0 +1,15 @@
+Subject: Don't install routes for VTI policies
+
+If a VTI policy is detected by checking that the prefix length is 0
+and a mark is set, no kernel route should get installed.
+
+--- a/src/libcharon/plugins/kernel_netlink/kernel_netlink_ipsec.c
++++ b/src/libcharon/plugins/kernel_netlink/kernel_netlink_ipsec.c
+@@ -3043,6 +3043,7 @@ static status_t add_policy_internal(priv
+ 	 * - we are in tunnel/BEET mode or install a bypass policy
+ 	 */
+ 	if (policy->direction == POLICY_OUT && this->install_routes &&
++		(policy->sel.prefixlen_s != 0 || ipsec->mark.value == 0) &&
+ 		!policy->sel.proto && !policy->sel.dport && !policy->sel.sport &&
+ 		(this->install_routes_xfrmi || !policy->if_id))
+ 	{

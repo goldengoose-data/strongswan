@@ -1,0 +1,38 @@
+--- a/src/libcharon/plugins/updown/updown_listener.c
++++ b/src/libcharon/plugins/updown/updown_listener.c
+@@ -267,9 +267,11 @@ static void invoke_once(private_updown_l
+ 	process_t *process;
+ 	char port_buf[PORT_BUF_LEN];
+ 	char *envp[128] = {};
++	char *domain;
+ 
+ 	me = ike_sa->get_my_host(ike_sa);
+ 	other = ike_sa->get_other_host(ike_sa);
++	domain = config->get_domain(config);
+ 
+ 	push_env(envp, countof(envp), "PATH=%s", getenv("PATH"));
+ 	push_env(envp, countof(envp), "PLUTO_VERSION=1.1");
+@@ -291,7 +293,7 @@ static void invoke_once(private_updown_l
+ 	if (up)
+ 	{
+ 		host = charon->kernel->get_nexthop(charon->kernel, other, -1, me,
+-										   &iface);
++										   &iface, domain);
+ 		if (host && iface)
+ 		{
+ 			cache_iface(this, child_sa->get_reqid(child_sa), iface);
+@@ -385,6 +387,14 @@ static void invoke_once(private_updown_l
+ 	{
+ 		push_env(envp, countof(envp), "PLUTO_HOST_ACCESS=1");
+ 	}
++	if (domain)
++	{
++		push_env(envp, countof(envp), "PLUTO_DOMAIN=%s", domain);
++	}
++	if (config->get_domain(config))
++	{
++		push_env(envp, countof(envp), "PLUTO_CFG_INTERFACE=%s", config->get_interface(config));
++	}
+ 
+ 	process = process_start_shell(envp, NULL, &out, NULL, "2>&1 %s",
+ 								  config->get_updown(config));

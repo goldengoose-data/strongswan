@@ -1,0 +1,59 @@
+--- a/src/libcharon/kernel/kernel_interface.h
++++ b/src/libcharon/kernel/kernel_interface.h
+@@ -81,6 +81,8 @@ enum kernel_feature_t {
+ 	KERNEL_POLICY_SPI = (1<<4),
+ 	/** IPsec backend reports use time per SA via query_sa() */
+ 	KERNEL_SA_USE_TIME = (1<<5),
++	/** IPsec backend does not provide usage times via policies */
++	KERNEL_POLICY_NO_TIME = (1 << 6),
+ };
+ 
+ /**
+--- a/src/libcharon/sa/child_sa.c
++++ b/src/libcharon/sa/child_sa.c
+@@ -771,6 +771,17 @@ static bool update_usetime(private_child
+ 	return TRUE;
+ }
+ 
++/**
++ * Check kernel interface if policy provide usage time
++ */
++static bool policy_provides_no_time()
++{
++	kernel_feature_t f;
++
++	f = charon->kernel->get_features(charon->kernel);
++	return !(f & KERNEL_POLICY_NO_TIME);
++}
++
+ METHOD(child_sa_t, get_usestats, void,
+ 	private_child_sa_t *this, bool inbound,
+ 	time_t *time, uint64_t *bytes, uint64_t *packets)
+@@ -780,14 +791,21 @@ METHOD(child_sa_t, get_usestats, void,
+ 
+ 	sa_use_time = charon->kernel->get_features(charon->kernel) & KERNEL_SA_USE_TIME;
+ 
+-	if (bytes || packets || sa_use_time)
++	if (policy_provides_no_time())
+ 	{
+-		status = update_usebytes(this, inbound);
++		update_usebytes(this, inbound);
+ 	}
+-	if (time && !sa_use_time && status != FAILED)
+-	{	/* query policies only if last use time is not available from SAs and
+-		 * there was either traffic or querying the SA wasn't supported */
+-		update_usetime(this, inbound);
++	else
++	{
++		if (bytes || packets || sa_use_time)
++		{
++			status = update_usebytes(this, inbound);
++		}
++		if (time && !sa_use_time && status != FAILED)
++		{	/* query policies only if last use time is not available from SAs and
++			 * there was either traffic or querying the SA wasn't supported */
++			update_usetime(this, inbound);
++		}
+ 	}
+ 	if (time)
+ 	{

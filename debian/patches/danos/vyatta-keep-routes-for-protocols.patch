@@ -1,0 +1,16 @@
+--- a/src/libcharon/plugins/kernel_netlink/kernel_netlink_ipsec.c
++++ b/src/libcharon/plugins/kernel_netlink/kernel_netlink_ipsec.c
+@@ -3038,13 +3038,11 @@ static status_t add_policy_internal(priv
+ 	/* install a route, if:
+ 	 * - this is an outbound policy (to just get one for each child)
+ 	 * - routing is not disabled via strongswan.conf
+-	 * - the selector is not for a specific protocol/port
+ 	 * - routes via XFRM interfaces are enabled or no interface ID is configured
+ 	 * - we are in tunnel/BEET mode or install a bypass policy
+ 	 */
+ 	if (policy->direction == POLICY_OUT && this->install_routes &&
+ 		(policy->sel.prefixlen_s != 0 || ipsec->mark.value == 0) &&
+-		!policy->sel.proto && !policy->sel.dport && !policy->sel.sport &&
+ 		(this->install_routes_xfrmi || !policy->if_id))
+ 	{
+ 		if (mapping->type == POLICY_PASS ||

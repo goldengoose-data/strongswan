@@ -26,3 +26,42 @@ dont-load-kernel-libipsec-plugin-by-default.patch
 0026-ikev2-Prevent-use-after-free-during-collision-after-.patch
 0027-eap-ttls-peap-Return-auth-cfg-with-details-on-TLS-an.patch
 0028-ikev2-Properly-reject-CREATE_CHILD_SA-requests-on-un.patch
+
+# Elster OS: the DANOS 2105 strongSwan patches (github.com/danos/strongswan, tag danos/2105, 5.9.0-0danos4),
+# refreshed for 6.0.1
+danos/0008-hashtable-Use-quadratic-probing.patch
+danos/0007-vici-Store-configs-in-a-hashtable.patch
+danos/0006-hashtable-Maintain-insertion-order-when-enumerating.patch
+danos/0005-hashlist-Move-get_match-and-sorting-into-a-separate-.patch
+danos/0004-unit-tests-Pass-test-iteration-to-fixtures.patch
+danos/0003-hashtable-Optionally-collect-and-report-profiling-da.patch
+danos/0002-hashtable-Optionally-sort-keys-items-in-buckets-in-a.patch
+danos/0001-hashtable-Store-items-in-buckets-in-insertion-order.patch
+danos/vyatta-revert-priority-base-changes-for-dataplane.patch
+danos/vyatta-fix_main_table_routes.patch
+danos/vyatta-use_nlm_f_replace_when_adding_routes.patch
+danos/vyatta-openswan-tools.patch
+danos/stroke-print-host-ports.patch
+danos/vyatta-dont_install_routes_for_vti_policies.patch
+danos/extauthplugin.patch
+danos/vyatta-keep-routes-for-protocols.patch
+danos/vyatta-kernel-netlink-dont_dump_all_routes.patch
+danos/vyatta-default-idr.patch
+danos/vyatta-vip-and-overlay-vrf.patch
+danos/vyatta-updown-domain.patch
+danos/revocation_interface.patch
+danos/vyatta-stroke-mark-in-sa-option.patch
+danos/vyatta-debug-max-ikev1.patch
+danos/vyatta-ikev1-qm-retransmits.patch
+danos/source-interface.patch
+danos/ext-fetcher.patch
+danos/stroke-mimic-vici-load-conn.patch
+danos/vyatta-reduce-dpd-loglevel.patch
+danos/vyatta-dataplane-disable-sa-updates.patch
+danos/vyatta-tfc-notsupported.patch
+danos/vyatta-disable-query-policy.patch
+danos/charon-systemd-sigusr1.patch
+
+# Elster OS
+elster/charon-start-at-boot.patch
+elster/unit-tests-mock-net-danos-kernel-api.patch

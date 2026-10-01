@@ -1,0 +1,515 @@
+--- a/src/charon-cmd/cmd/cmd_connection.c
++++ b/src/charon-cmd/cmd/cmd_connection.c
+@@ -147,6 +147,7 @@ static peer_cfg_t* create_peer_cfg(priva
+ 		.remote = this->host,
+ 		.remote_port = IKEV2_UDP_PORT,
+ 		.fragmentation = FRAGMENTATION_YES,
++		.source_interface = NULL,
+ 	};
+ 	peer_cfg_create_t peer = {
+ 		.cert_policy = CERT_SEND_IF_ASKED,
+--- a/src/charon-nm/nm/nm_service.c
++++ b/src/charon-nm/nm/nm_service.c
+@@ -864,6 +864,7 @@ static gboolean connect_(NMVpnServicePlu
+ 		.local_port = charon->socket->get_port(charon->socket, FALSE),
+ 		.remote_port = IKEV2_UDP_PORT,
+ 		.fragmentation = FRAGMENTATION_YES,
++		.source_interface = NULL,
+ 	};
+ 	peer_cfg_create_t peer = {
+ 		.cert_policy = CERT_SEND_IF_ASKED,
+--- a/src/conftest/config.c
++++ b/src/conftest/config.c
+@@ -120,6 +120,7 @@ static ike_cfg_t *load_ike_config(privat
+ 									500, config),
+ 		.force_encap = settings->get_bool(settings, "configs.%s.fake_nat",
+ 									FALSE, config),
++		.source_interface = NULL,
+ 	};
+ 
+ 	ike_cfg = ike_cfg_create(&ike);
+--- a/src/libcharon/config/ike_cfg.c
++++ b/src/libcharon/config/ike_cfg.c
+@@ -62,6 +62,11 @@ struct private_ike_cfg_t {
+ 	char *other;
+ 
+ 	/**
++	 * Source interface to bind on
++	 */
++	char *source_interface;
++
++	/**
+ 	 * Local single host or DNS names, as allocated char*
+ 	 */
+ 	linked_list_t *my_hosts;
+@@ -302,6 +307,12 @@ METHOD(ike_cfg_t, get_other_port, uint16
+ 	return this->other_port;
+ }
+ 
++METHOD(ike_cfg_t, get_source_interface, char*,
++	private_ike_cfg_t *this)
++{
++	return this->source_interface;
++}
++
+ METHOD(ike_cfg_t, get_dscp, uint8_t,
+ 	private_ike_cfg_t *this)
+ {
+@@ -411,6 +422,7 @@ METHOD(ike_cfg_t, equals, bool,
+ 		this->childless == other->childless &&
+ 		streq(this->me, other->me) &&
+ 		streq(this->other, other->other) &&
++		streq(this->source_interface, other->source_interface) &&
+ 		this->my_port == other->my_port &&
+ 		this->other_port == other->other_port;
+ }
+@@ -431,6 +443,10 @@ METHOD(ike_cfg_t, destroy, void,
+ 										offsetof(proposal_t, destroy));
+ 		free(this->me);
+ 		free(this->other);
++		if (this->source_interface)
++		{
++			free(this->source_interface);
++		}
+ 		this->my_hosts->destroy_function(this->my_hosts, free);
+ 		this->other_hosts->destroy_function(this->other_hosts, free);
+ 		this->my_ranges->destroy_offset(this->my_ranges,
+@@ -617,6 +633,7 @@ ike_cfg_t *ike_cfg_create(ike_cfg_create
+ 			.get_other_addr = _get_other_addr,
+ 			.get_my_port = _get_my_port,
+ 			.get_other_port = _get_other_port,
++			.get_source_interface = _get_source_interface,
+ 			.get_dscp = _get_dscp,
+ 			.add_proposal = _add_proposal,
+ 			.get_proposals = _get_proposals,
+@@ -632,6 +649,7 @@ ike_cfg_t *ike_cfg_create(ike_cfg_create
+ 		.certreq = !data->no_certreq,
+ 		.ocsp_certreq = data->ocsp_certreq,
+ 		.force_encap = data->force_encap,
++		.source_interface = data->source_interface,
+ 		.fragmentation = data->fragmentation,
+ 		.childless = data->childless,
+ 		.me = strdup(data->local),
+--- a/src/libcharon/plugins/ha/ha_tunnel.c
++++ b/src/libcharon/plugins/ha/ha_tunnel.c
+@@ -198,6 +198,7 @@ static void setup_tunnel(private_ha_tunn
+ 		.remote = remote,
+ 		.remote_port = IKEV2_UDP_PORT,
+ 		.no_certreq = TRUE,
++		.source_interface = NULL,
+ 	};
+ 	peer_cfg_create_t peer = {
+ 		.cert_policy = CERT_NEVER_SEND,
+--- a/src/libcharon/plugins/load_tester/load_tester_config.c
++++ b/src/libcharon/plugins/load_tester/load_tester_config.c
+@@ -702,6 +702,7 @@ static peer_cfg_t* generate_config(priva
+ 	ike_cfg_create_t ike = {
+ 		.version = this->version,
+ 		.remote_port = IKEV2_UDP_PORT,
++		.source_interface = NULL,
+ 	};
+ 	peer_cfg_create_t peer = {
+ 		.cert_policy = CERT_SEND_IF_ASKED,
+--- a/src/libcharon/plugins/medcli/medcli_config.c
++++ b/src/libcharon/plugins/medcli/medcli_config.c
+@@ -94,6 +94,7 @@ static peer_cfg_t *build_mediation_confi
+ 		.local_port = charon->socket->get_port(charon->socket, FALSE),
+ 		.remote_port = IKEV2_UDP_PORT,
+ 		.no_certreq = TRUE,
++		.source_interface = NULL,
+ 	};
+ 	peer_cfg_create_t peer = *defaults;
+ 	chunk_t me, other;
+--- a/src/libcharon/plugins/medsrv/medsrv_config.c
++++ b/src/libcharon/plugins/medsrv/medsrv_config.c
+@@ -138,6 +138,7 @@ medsrv_config_t *medsrv_config_create(da
+ 		.remote = "0.0.0.0",
+ 		.remote_port = IKEV2_UDP_PORT,
+ 		.no_certreq = TRUE,
++		.source_interface = NULL,
+ 	};
+ 
+ 	INIT(this,
+--- a/src/libcharon/plugins/sql/sql_config.c
++++ b/src/libcharon/plugins/sql/sql_config.c
+@@ -282,6 +282,7 @@ static ike_cfg_t *build_ike_cfg(private_
+ 			.no_certreq = !certreq,
+ 			.force_encap = force_encap,
+ 			.fragmentation = FRAGMENTATION_YES,
++			.source_interface = NULL,
+ 		};
+ 
+ 		ike_cfg = ike_cfg_create(&ike);
+--- a/src/libcharon/plugins/stroke/stroke_config.c
++++ b/src/libcharon/plugins/stroke/stroke_config.c
+@@ -276,6 +276,7 @@ static ike_cfg_t *build_ike_cfg(private_
+ 		.no_certreq = msg->add_conn.other.sendcert == CERT_NEVER_SEND,
+ 		.force_encap = msg->add_conn.force_encap,
+ 		.fragmentation = msg->add_conn.fragmentation,
++		.source_interface = NULL,
+ 		.dscp = msg->add_conn.ikedscp,
+ 	};
+ 	if (msg->add_conn.me.allow_any)
+--- a/src/libcharon/plugins/uci/uci_config.c
++++ b/src/libcharon/plugins/uci/uci_config.c
+@@ -134,6 +134,7 @@ METHOD(enumerator_t, peer_enumerator_enu
+ 		.remote = "0.0.0.0",
+ 		.remote_port = IKEV2_UDP_PORT,
+ 		.no_certreq = TRUE,
++		.source_interface = NULL,
+ 	};
+ 	peer_cfg_create_t peer = {
+ 		.cert_policy = CERT_SEND_IF_ASKED,
+--- a/src/libcharon/plugins/vici/vici_config.c
++++ b/src/libcharon/plugins/vici/vici_config.c
+@@ -340,6 +340,7 @@ typedef struct {
+ 	uint32_t if_id_in;
+ 	uint32_t if_id_out;
+ 	char *install_virtual_ip_on;
++	char *source_interface;
+ #ifdef ME
+ 	bool mediation;
+ 	char *mediated_by;
+@@ -460,6 +461,11 @@ static void log_peer_data(peer_data_t *d
+ 	{
+ 		DBG2(DBG_CFG, "  install_virtual_ip_on = %s", data->install_virtual_ip_on);
+ 	}
++	if (data->source_interface)
++	{
++		DBG2(DBG_CFG, "  source_interface = %s", data->source_interface);
++	}
++
+ 
+ 	if (data->vips->get_count(data->vips))
+ 	{
+@@ -506,6 +512,7 @@ static void free_peer_data(peer_data_t *
+ 	free(data->remote_addrs);
+ 	DESTROY_IF(data->ppk_id);
+ 	free(data->install_virtual_ip_on);
++	free(data->source_interface);
+ #ifdef ME
+ 	free(data->mediated_by);
+ 	DESTROY_IF(data->peer_id);
+@@ -1965,6 +1972,7 @@ CALLBACK(peer_kv, bool,
+ 		{ "if_id_in",		parse_if_id,		&peer->if_id_in				},
+ 		{ "if_id_out",		parse_if_id,		&peer->if_id_out			},
+ 		{ "install_virtual_ip_on",	parse_string,			&peer->install_virtual_ip_on			},
++		{ "source_interface",		parse_string,			&peer->source_interface			},
+ #ifdef ME
+ 		{ "mediation",		parse_bool,			&peer->mediation			},
+ 		{ "mediated_by",	parse_string,		&peer->mediated_by			},
+@@ -2871,6 +2879,7 @@ CALLBACK(config_sn, bool,
+ 						peer.ocsp == OCSP_SEND_REQUEST,
+ 		.force_encap = peer.encap,
+ 		.fragmentation = peer.fragmentation,
++		.source_interface = NULL,
+ 		.childless = peer.childless,
+ 		.dscp = peer.dscp,
+ 	};
+--- a/src/libcharon/tests/suites/test_ike_cfg.c
++++ b/src/libcharon/tests/suites/test_ike_cfg.c
+@@ -26,6 +26,7 @@ static void assert_family(int expected,
+ 		.local_port = 500,
+ 		.remote = local ? "%any" : addr,
+ 		.remote_port = 500,
++		.source_interface = NULL,
+ 	};
+ 	ike_cfg_t *cfg;
+ 	int family;
+--- a/src/libcharon/tests/utils/exchange_test_helper.c
++++ b/src/libcharon/tests/utils/exchange_test_helper.c
+@@ -97,6 +97,7 @@ static ike_cfg_t *create_ike_cfg(bool in
+ 		.local_port = IKEV2_UDP_PORT,
+ 		.remote = "127.0.0.1",
+ 		.remote_port = IKEV2_UDP_PORT,
++		.source_interface = NULL,
+ 	};
+ 	enumerator_t *enumerator;
+ 	ike_cfg_t *ike_cfg;
+--- a/src/libcharon/config/ike_cfg.h
++++ b/src/libcharon/config/ike_cfg.h
+@@ -142,6 +142,13 @@ struct ike_cfg_t {
+ 	char* (*get_other_addr) (ike_cfg_t *this);
+ 
+ 	/**
++	 * Get source interface to bind on
++	 *
++	 * @return				string of source interface
++	 */
++	char* (*get_source_interface) (ike_cfg_t *this);
++
++	/**
+ 	 * Get the port to use as our source port.
+ 	 *
+ 	 * @return				source address port, host order
+@@ -299,6 +306,8 @@ struct ike_cfg_create_t {
+ 	bool ocsp_certreq;
+ 	/** Enforce UDP encapsulation by faking NATD notify */
+ 	bool force_encap;
++	/**  source interface to bind on */
++	char *source_interface;
+ 	/** Use IKE fragmentation */
+ 	fragmentation_t fragmentation;
+ 	/** Childless IKE_SA configuration */
+--- a/src/libcharon/kernel/kernel_interface.c
++++ b/src/libcharon/kernel/kernel_interface.c
+@@ -570,13 +570,13 @@ METHOD(kernel_interface_t, flush_policie
+ }
+ 
+ METHOD(kernel_interface_t, get_source_addr, host_t*,
+-	private_kernel_interface_t *this, host_t *dest, host_t *src)
++	private_kernel_interface_t *this, host_t *dest, host_t *src, char *oif)
+ {
+ 	if (!this->net)
+ 	{
+ 		return NULL;
+ 	}
+-	return this->net->get_source_addr(this->net, dest, src);
++	return this->net->get_source_addr(this->net, dest, src, oif);
+ }
+ 
+ METHOD(kernel_interface_t, get_nexthop, host_t*,
+--- a/src/libcharon/kernel/kernel_interface.h
++++ b/src/libcharon/kernel/kernel_interface.h
+@@ -298,10 +298,11 @@ struct kernel_interface_t {
+ 	 *
+ 	 * @param dest			target destination address
+ 	 * @param src			source address to check, or NULL
++	 * @param oif			source interface to check, or NULL
+ 	 * @return				outgoing source address, NULL if unreachable
+ 	 */
+ 	host_t* (*get_source_addr)(kernel_interface_t *this,
+-							   host_t *dest, host_t *src);
++							   host_t *dest, host_t *src, char *oif);
+ 
+ 	/**
+ 	 * Get the next hop for a destination.
+--- a/src/libcharon/kernel/kernel_net.h
++++ b/src/libcharon/kernel/kernel_net.h
+@@ -74,9 +74,10 @@ struct kernel_net_t {
+ 	 *
+ 	 * @param dest			target destination address
+ 	 * @param src			source address to check, or NULL
++	 * @param oif			source interface to check, or NULL
+ 	 * @return				outgoing source address, NULL if unreachable
+ 	 */
+-	host_t* (*get_source_addr)(kernel_net_t *this, host_t *dest, host_t *src);
++	host_t* (*get_source_addr)(kernel_net_t *this, host_t *dest, host_t *src, char *oif);
+ 
+ 	/**
+ 	 * Get the next hop for a destination.
+--- a/src/libcharon/plugins/kernel_iph/kernel_iph_net.c
++++ b/src/libcharon/plugins/kernel_iph/kernel_iph_net.c
+@@ -539,7 +539,7 @@ METHOD(kernel_net_t, create_address_enum
+ }
+ 
+ METHOD(kernel_net_t, get_source_addr, host_t*,
+-	private_kernel_iph_net_t *this, host_t *dest, host_t *src)
++	private_kernel_iph_net_t *this, host_t *dest, host_t *src, char *oif_notused)
+ {
+ 	MIB_IPFORWARD_ROW2 route;
+ 	SOCKADDR_INET best, *sai_dst, *sai_src = NULL;
+--- a/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c
++++ b/src/libcharon/plugins/kernel_netlink/kernel_netlink_net.c
+@@ -1933,7 +1933,7 @@ static rt_entry_t *parse_route(struct nl
+  */
+ static host_t *get_route(private_kernel_netlink_net_t *this, host_t *dest,
+ 						 int prefix, bool nexthop, host_t *candidate,
+-						 char **iface, u_int recursion, char *domain)
++						 char **iface, u_int recursion, char *oif)
+ {
+ 	netlink_buf_t request;
+ 	struct nlmsghdr *hdr, *out, *current;
+@@ -2003,9 +2003,9 @@ static host_t *get_route(private_kernel_
+ 		netlink_add_attribute(hdr, RTA_DST, chunk, sizeof(request));
+ 	}
+ 
+-	/* domain/VRF support */
+-	if (domain) {
+-		ifindex = get_interface_index(this, domain);
++	/* oif support also required for domain/VRF support */
++	if (oif) {
++		ifindex = get_interface_index(this, oif);
+ 		chunk.ptr = (char*)&ifindex;
+ 		chunk.len = sizeof(ifindex);
+ 		netlink_add_attribute(hdr, RTA_OIF, chunk, sizeof(request));
+@@ -2172,7 +2172,7 @@ static host_t *get_route(private_kernel_
+ 			if (gtw && !gtw->ip_equals(gtw, dest))
+ 			{
+ 				route->src_host = get_route(this, gtw, -1, FALSE, candidate,
+-											iface, recursion + 1, domain);
++											iface, recursion + 1, oif);
+ 			}
+ 			DESTROY_IF(gtw);
+ 			if (route->src_host)
+@@ -2241,9 +2241,9 @@ static host_t *get_route(private_kernel_
+ }
+ 
+ METHOD(kernel_net_t, get_source_addr, host_t*,
+-	private_kernel_netlink_net_t *this, host_t *dest, host_t *src)
++	private_kernel_netlink_net_t *this, host_t *dest, host_t *src, char *oif)
+ {
+-	return get_route(this, dest, -1, FALSE, src, NULL, 0, NULL);
++	return get_route(this, dest, -1, FALSE, src, NULL, 0, oif);
+ }
+ 
+ METHOD(kernel_net_t, get_nexthop, host_t*,
+--- a/src/libcharon/plugins/kernel_pfroute/kernel_pfroute_net.c
++++ b/src/libcharon/plugins/kernel_pfroute/kernel_pfroute_net.c
+@@ -1787,7 +1787,7 @@ retry:
+ }
+ 
+ METHOD(kernel_net_t, get_source_addr, host_t*,
+-	private_kernel_pfroute_net_t *this, host_t *dest, host_t *src)
++	private_kernel_pfroute_net_t *this, host_t *dest, host_t *src, char *oif_notused)
+ {
+ 	return get_route(this, FALSE, dest, src, NULL);
+ }
+--- a/src/libcharon/sa/ike_sa.c
++++ b/src/libcharon/sa/ike_sa.c
+@@ -1535,7 +1535,8 @@ static void resolve_hosts(private_ike_sa
+ 		{
+ 			host->destroy(host);
+ 			host = charon->kernel->get_source_addr(charon->kernel,
+-												   this->other_host, NULL);
++								   this->other_host, NULL,
++								   this->ike_cfg->get_source_interface(this->ike_cfg));
+ 			if (host)
+ 			{
+ 				host->set_port(host, this->ike_cfg->get_my_port(this->ike_cfg));
+@@ -2631,6 +2632,12 @@ static bool is_current_path_valid(privat
+ {
+ 	bool valid = FALSE;
+ 	host_t *src;
++	char *source_interface = NULL;
++
++	if (this->ike_cfg)
++	{
++		source_interface = this->ike_cfg->get_source_interface(this->ike_cfg);
++	}
+ 
+ 	if (supports_extension(this, EXT_MOBIKE) &&
+ 		lib->settings->get_bool(lib->settings,
+@@ -2638,7 +2645,7 @@ static bool is_current_path_valid(privat
+ 	{
+ 		/* check if the current path is the best path; migrate otherwise */
+ 		src = charon->kernel->get_source_addr(charon->kernel, this->other_host,
+-											  NULL);
++										  NULL, source_interface);
+ 		if (src)
+ 		{
+ 			valid = src->ip_equals(src, this->my_host);
+@@ -2651,7 +2658,7 @@ static bool is_current_path_valid(privat
+ 		return valid;
+ 	}
+ 	src = charon->kernel->get_source_addr(charon->kernel, this->other_host,
+-										  this->my_host);
++										  this->my_host, source_interface);
+ 	if (src)
+ 	{
+ 		if (src->ip_equals(src, this->my_host))
+@@ -2676,6 +2683,13 @@ static bool is_any_path_valid(private_ik
+ 	enumerator_t *enumerator;
+ 	host_t *src = NULL, *addr;
+ 	int family = AF_UNSPEC;
++	char *source_interface = NULL;
++
++	if (this->ike_cfg)
++	{
++		source_interface = this->ike_cfg->get_source_interface(this->ike_cfg);
++	}
++
+ 
+ 	switch (charon->socket->supported_families(charon->socket))
+ 	{
+@@ -2698,7 +2712,7 @@ static bool is_any_path_valid(private_ik
+ 			continue;
+ 		}
+ 		DBG1(DBG_IKE, "looking for a route to %H ...", addr);
+-		src = charon->kernel->get_source_addr(charon->kernel, addr, NULL);
++		src = charon->kernel->get_source_addr(charon->kernel, addr, NULL, source_interface);
+ 		if (src)
+ 		{
+ 			break;
+--- a/src/libcharon/sa/ikev2/tasks/ike_mobike.c
++++ b/src/libcharon/sa/ikev2/tasks/ike_mobike.c
+@@ -306,7 +306,7 @@ METHOD(ike_mobike_t, transmit, bool,
+ 
+ 	if (!this->check)
+ 	{
+-		me = charon->kernel->get_source_addr(charon->kernel, other_old, me_old);
++		me = charon->kernel->get_source_addr(charon->kernel, other_old, me_old, NULL);
+ 		if (me)
+ 		{
+ 			if (me->ip_equals(me, me_old))
+@@ -344,7 +344,7 @@ METHOD(ike_mobike_t, transmit, bool,
+ 		{
+ 			continue;
+ 		}
+-		me = charon->kernel->get_source_addr(charon->kernel, other, NULL);
++		me = charon->kernel->get_source_addr(charon->kernel, other, NULL, NULL);
+ 		if (me)
+ 		{
+ 			/* reuse port for an active address, 4500 otherwise */
+@@ -388,7 +388,7 @@ METHOD(task_t, build_i, status_t,
+ 		/* we check if the existing address is still valid */
+ 		old = message->get_source(message);
+ 		new = charon->kernel->get_source_addr(charon->kernel,
+-										message->get_destination(message), old);
++										message->get_destination(message), old, NULL);
+ 		if (new)
+ 		{
+ 			if (!new->ip_equals(new, old))
+--- a/src/libcharon/sa/trap_manager.c
++++ b/src/libcharon/sa/trap_manager.c
+@@ -239,9 +239,11 @@ METHOD(trap_manager_t, install, bool,
+ 	enumerator_t *enumerator;
+ 	status_t status;
+ 	bool result = FALSE, wildcard = FALSE;
++	char *source_interface = NULL;
+ 
+ 	/* try to resolve addresses */
+ 	ike_cfg = peer->get_ike_cfg(peer);
++	source_interface = ike_cfg->get_source_interface(ike_cfg);
+ 	other = ike_cfg->resolve_other(ike_cfg, AF_UNSPEC);
+ 	if (other && other->is_anyaddr(other) &&
+ 		child->get_mode(child) == MODE_TRANSPORT)
+@@ -276,7 +278,7 @@ METHOD(trap_manager_t, install, bool,
+ 		if ((!me || me->is_anyaddr(me)) && !other->is_anyaddr(other))
+ 		{
+ 			DESTROY_IF(me);
+-			me = charon->kernel->get_source_addr(charon->kernel, other, NULL);
++			me = charon->kernel->get_source_addr(charon->kernel, other, NULL, source_interface);
+ 		}
+ 		if (!me)
+ 		{
+--- a/src/swanctl/swanctl.opt
++++ b/src/swanctl/swanctl.opt
+@@ -63,6 +63,17 @@ connections.<conn>.remote_port = 500
+ 	Remote UDP port for IKE communication. If the default of port _500_ is used,
+ 	automatic IKE port floating to port 4500 is used to work around NAT issues.
+ 
++connections.<conn>.source_interface =
++	Source interface to use for IKE communication
++
++	Source interface to use for IKE communication. Takes single interface name.
++
++	As initiator a route lookup is performed to obtain the source address to
++	initiate the IKE communication. This route lookup is limited to routes
++	using the specified interface as egress interface.
++
++	On Linux, the route lookup is performed with the attribute RTA_OIF set.
++
+ connections.<conn>.proposals = default
+ 	Comma separated proposals to accept for IKE.
+ 
+--- a/src/libcharon/tests/suites/test_peer_cfg.c
++++ b/src/libcharon/tests/suites/test_peer_cfg.c
+@@ -30,6 +30,7 @@ static ike_cfg_t *create_ike_cfg()
+ 		.local_port = 500,
+ 		.remote = "127.0.0.1",
+ 		.remote_port = 500,
++		.source_interface = NULL,
+ 	};
+ 	return ike_cfg_create(&ike);
+ }
